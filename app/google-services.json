@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "605943827235",
+    "project_id": "shopp-1bd36",
+    "storage_bucket": "shopp-1bd36.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:605943827235:android:da7344bff9cef299475a96",
+        "android_client_info": {
+          "package_name": "com.example.shopp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAXPpn3rFUXE_kxmYVpwNins1g6cfPn-l4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
