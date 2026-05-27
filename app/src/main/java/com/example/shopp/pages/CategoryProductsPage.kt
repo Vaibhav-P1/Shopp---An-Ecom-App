@@ -1,6 +1,7 @@
 package com.example.shopp.pages
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
@@ -16,6 +17,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.example.shopp.components.CategoryItem
+import com.example.shopp.components.ProductItemView
 import com.example.shopp.model.CategoryModel
 import com.example.shopp.model.ProductModel
 import com.google.firebase.firestore.ktx.firestore
@@ -38,6 +40,7 @@ fun CategoryProductsPage(modifier: Modifier = Modifier,categoryId:String) {
                         document.toObject(ProductModel::class.java)
                     }
                     productList.value = resultList
+//                        .plus(resultList).plus(resultList)  it allows to show more data
                 }
             }
     }
@@ -47,9 +50,16 @@ fun CategoryProductsPage(modifier: Modifier = Modifier,categoryId:String) {
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        items(productList.value) { item ->
-            Text(text = item.title)
-            Spacer(modifier = Modifier.height(50.dp))
+        items(productList.value.chunked(2)) { rowItems ->
+           Row {
+               rowItems.forEach {
+                   ProductItemView(product = it, modifier = Modifier.weight(1f))
+               }
+               // If a row has only 1 product, append an empty spacer to maintain layout sizing
+               if (rowItems.size == 1) {
+                   Spacer(modifier = Modifier.weight(1f))
+               }
+           }
         }
     }
 }
