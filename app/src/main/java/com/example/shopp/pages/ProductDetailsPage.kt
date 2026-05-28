@@ -30,12 +30,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import com.example.shopp.AppUtil
 import com.example.shopp.model.ProductModel
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
@@ -47,6 +49,8 @@ import com.tbuonomo.viewpagerdotsindicator.compose.type.ShiftIndicatorType
 fun ProductDetailsPage(modifier: Modifier = Modifier, productId: String) {
     var product by remember { mutableStateOf(ProductModel()) }
     val scrollState = rememberScrollState()
+
+    var context = LocalContext.current
 
     LaunchedEffect(Unit) {
         Firebase.firestore
@@ -150,7 +154,9 @@ fun ProductDetailsPage(modifier: Modifier = Modifier, productId: String) {
 
         // Add to Cart Primary Button
         Button(
-            onClick = { /* Handle add to cart */ },
+            onClick = {
+                AppUtil.addItemToCart(productId = productId, context = context)
+            },
             modifier = Modifier
                 .fillMaxWidth()
                 .height(50.dp)

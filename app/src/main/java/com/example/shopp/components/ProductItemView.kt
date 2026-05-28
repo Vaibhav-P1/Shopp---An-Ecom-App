@@ -20,6 +20,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
@@ -27,11 +28,15 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import com.example.shopp.AppUtil
 import com.example.shopp.GlobalNavigation
 import com.example.shopp.model.ProductModel
 
 @Composable
 fun ProductItemView(modifier: Modifier = Modifier,product: ProductModel) {
+
+    val context = LocalContext.current
+
     Card(
         modifier = modifier
             .padding(8.dp)
@@ -90,7 +95,9 @@ fun ProductItemView(modifier: Modifier = Modifier,product: ProductModel) {
                 Spacer(modifier = Modifier.weight(1f))
 
                 // Add to Cart Button
-                IconButton(onClick = { /* Handle add to cart click */ }) {
+                IconButton(onClick = {
+                    AppUtil.addItemToCart(context = context, productId = product.id)
+                }) {
                     Icon(
                         imageVector = Icons.Default.ShoppingCart,
                         contentDescription = "Add to cart"
