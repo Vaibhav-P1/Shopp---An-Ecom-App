@@ -1,11 +1,14 @@
 package com.example.shopp
 
+import android.app.Activity
 import android.content.Context
 import android.widget.Toast
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
+import com.razorpay.Checkout
+import org.json.JSONObject
 
 object AppUtil {
 
@@ -86,5 +89,41 @@ object AppUtil {
         }
 
 
+    }
+
+    fun getDiscountPercentage(): Float {
+        return 10.0f // Represents a 10% discount
+    }
+
+    fun getTaxPercentage(): Float {
+        return 13.0f // Represents a 13% tax rule
+    }
+
+    fun razorpayApiKey() : String{
+        return "rzp_test_SuqQDOg4Ffsnbk"
+    }
+
+    fun startPayment(amount: Float) {
+        val checkout = Checkout()
+        checkout.setKeyID(razorpayApiKey())
+
+        try {
+            val options = JSONObject()
+            options.put("name", "Shopp")
+            options.put("description", "E-commerce Order Payment Transaction")
+
+            // Critical transformation: Gateway accepts amounts exclusively in base subunits (cents/paise)
+            val calculatedSubunitAmount = (amount * 100).toInt()
+            options.put("amount", calculatedSubunitAmount)
+
+            options.put("currency", "INR") // Swap to "INR" for alternative banking portals
+
+            // Resolve context bounds tracking back safely into target instances
+            val currentActivityContext = GlobalNavigation.navController.context as Activity
+            checkout.open(currentActivityContext, options)
+
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
 }
