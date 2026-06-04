@@ -1,5 +1,6 @@
 package com.example.shopp.pages
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -15,6 +16,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -61,23 +63,33 @@ fun CartPage(modifier: Modifier = Modifier) {
             fontWeight = FontWeight.Bold
         )
 
-        LazyColumn(
-            modifier = Modifier
-                .weight(1f)
-        ) {
-            items(userModel.value.cartItems.toList(),key = {it.first}) {(productId,qty) ->
-                CartItemView(productId = productId, qty = qty)
+        if(userModel.value.cartItems.isNotEmpty()) {
+            LazyColumn(
+                modifier = Modifier
+                    .weight(1f)
+            ) {
+                items(userModel.value.cartItems.toList(), key = { it.first }) { (productId, qty) ->
+                    CartItemView(productId = productId, qty = qty)
+                }
             }
-        }
-        Button(
-            onClick = {
-                GlobalNavigation.navController.navigate("checkout")
-            },
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(50.dp)
-        ) {
-            Text(text = "Checkout", fontSize = 16.sp)
+            Button(
+                onClick = {
+                    GlobalNavigation.navController.navigate("checkout")
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(50.dp)
+            ) {
+                Text(text = "Checkout", fontSize = 16.sp)
+            }
+        }else{
+            Column(modifier = Modifier.fillMaxSize(),
+                verticalArrangement = Arrangement.Center,
+                 horizontalAlignment = Alignment.CenterHorizontally
+            ){
+                Text(text = "No items in cart",
+                    fontSize = 30.sp)
+            }
         }
 
     }

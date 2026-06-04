@@ -3,12 +3,15 @@ package com.example.shopp
 import android.app.Activity
 import android.content.Context
 import android.widget.Toast
+import com.example.shopp.model.OrderModel
+import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
 import com.razorpay.Checkout
 import org.json.JSONObject
+import java.util.UUID
 
 object AppUtil {
 
@@ -88,7 +91,41 @@ object AppUtil {
 
         }
 
+    }
 
+    fun clearCartAndAddToOrders() {
+        val currentUserId = FirebaseAuth.getInstance().currentUser?.uid!!
+        val userDoc =
+            Firebase.firestore            //Taking document reference because we want to update it
+                .collection("users")
+                .document(currentUserId)
+
+        userDoc.get().addOnCompleteListener {
+            if (it.isSuccessful) {
+                // Fetch the existing map of cart items or initialize an empty one
+                val currentCart = it.result.get("cartItems") as? Map<String, Long> ?: emptyMap()
+
+                val order = OrderModel(
+                    id ="ORD_"+ UUID.randomUUID().toString().replace("-","").take(10).uppercase(),
+                    userId = currentUserId,
+                    date = Timestamp.now(),
+                    items = currentCart,
+                    status = "ORDERED",
+                    address = it.result.get("address") as String
+                )
+                Firebase.firestore
+                    .collection("orders")
+                    .document(order.id)
+                    .set(order)
+                    .addOnCompleteListener {
+                        if(it.isSuccessful){
+                            userDoc.update("cartItems",FieldValue.delete())
+                        }
+                    }
+
+
+            }
+        }
     }
 
     fun getDiscountPercentage(): Float {

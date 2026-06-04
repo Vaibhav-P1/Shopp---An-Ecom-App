@@ -1,5 +1,6 @@
 package com.example.shopp
 
+import android.app.AlertDialog
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -29,7 +30,26 @@ class MainActivity : ComponentActivity(), PaymentResultListener {
     }
 
     override fun onPaymentSuccess(p0: String?) {
-        AppUtil.showToast(this,"Payment Successful")
+//        AppUtil.showToast(this,"Payment Successful")
+
+        AppUtil.clearCartAndAddToOrders()
+
+        // Construct interactive UX confirmation prompt modal blocks
+        val builder = AlertDialog.Builder(this)
+        builder.setTitle("Payment Successful")
+        .setMessage("Thank you! Your payment was completed successfully, and your order has been placed.")
+
+        .setPositiveButton("OK") { _ , _ ->
+            val navController = GlobalNavigation.navController
+            // Wipe backstack tracking traces entirely to protect checkout loops
+            navController.popBackStack()
+            navController.navigate("home")
+        }
+        .setCancelable(false)
+            .show()
+//        val confirmationDialog = builder.create()
+//        confirmationDialog.show()
+
     }
 
     override fun onPaymentError(p0: Int, p1: String?) {

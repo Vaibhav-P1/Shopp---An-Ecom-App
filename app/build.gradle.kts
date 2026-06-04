@@ -62,6 +62,7 @@ dependencies {
     implementation("com.tbuonomo:dotsindicator:5.1.0")
 
     implementation("com.razorpay:checkout:1.6.33")
+    implementation(libs.ui)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
