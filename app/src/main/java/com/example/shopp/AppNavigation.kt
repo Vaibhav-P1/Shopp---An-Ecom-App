@@ -8,6 +8,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.shopp.pages.CategoryProductsPage
 import com.example.shopp.pages.CheckoutPage
+import com.example.shopp.pages.OrdersPage
 import com.example.shopp.pages.ProductDetailsPage
 import com.example.shopp.screen.AuthScreen
 import com.example.shopp.screen.HomeScreen
@@ -55,6 +56,10 @@ fun AppNavigation(modifier: Modifier){
 
         composable("checkout"){
             CheckoutPage(modifier)
+        }
+
+        composable("orders"){
+            OrdersPage(modifier)
         }
 
     }

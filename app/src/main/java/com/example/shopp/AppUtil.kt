@@ -11,6 +11,8 @@ import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
 import com.razorpay.Checkout
 import org.json.JSONObject
+import java.text.SimpleDateFormat
+import java.util.Locale
 import java.util.UUID
 
 object AppUtil {
@@ -163,4 +165,11 @@ object AppUtil {
             e.printStackTrace()
         }
     }
+
+    fun formatDate(timestamp: Timestamp): String {
+        // Formats down into human readable values (e.g., "27 May 2025 04:30 PM")
+        val simpleDateFormat = SimpleDateFormat("dd MMM yyyy hh:mm a", Locale.getDefault())
+        return simpleDateFormat.format(timestamp.toDate().time)
+    }
+
 }
