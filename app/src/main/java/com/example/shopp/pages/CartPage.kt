@@ -52,7 +52,7 @@ fun CartPage(modifier: Modifier = Modifier) {
     }
 
     Column(
-        modifier = modifier
+        modifier = Modifier
             .fillMaxSize()
             .statusBarsPadding()
             .padding(16.dp)
