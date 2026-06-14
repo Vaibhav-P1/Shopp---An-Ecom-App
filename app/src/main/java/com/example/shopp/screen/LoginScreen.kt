@@ -8,16 +8,22 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Button
+import androidx.compose.material3.Icon
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
@@ -39,8 +45,10 @@ fun LoginScreen(modifier: Modifier = Modifier,navController : NavController, aut
     var password by remember { mutableStateOf("") }
     var context = LocalContext.current
 
-    var isLoading by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+    val webClientId = "605943827235-4e7mfr5n29ho44cs3lvldrj9octfusoh.apps.googleusercontent.com"
 
+    var isLoading by remember { mutableStateOf(false) }
 
     Column(
         modifier = modifier.fillMaxSize().padding(32.dp),
@@ -119,6 +127,37 @@ fun LoginScreen(modifier: Modifier = Modifier,navController : NavController, aut
                 .height(60.dp)
         ) {
             Text(text = if (isLoading) "Logging in..." else "Login", fontSize = 22.sp)
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+        Text("or", modifier = Modifier.align(Alignment.CenterHorizontally))
+        Spacer(modifier = Modifier.height(12.dp))
+
+        OutlinedButton(
+            onClick = {
+                isLoading = true
+                authViewModel.googleSignIn(context, scope, webClientId) { success, error ->
+                    isLoading = false
+                    if (success) {
+                        navController.navigate("home") {
+                            popUpTo("auth") { inclusive = true }
+                        }
+                    } else {
+                        AppUtil.showToast(context, error ?: "Google Sign-In failed")
+                    }
+                }
+            },
+            modifier = Modifier.fillMaxWidth(),
+            enabled = !isLoading
+        ) {
+            Icon(
+                painter = painterResource(id = R.drawable.ic_google), // add google icon to drawable
+                contentDescription = "Google",
+                modifier = Modifier.size(20.dp),
+                tint = Color.Unspecified
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text("Continue with Google")
         }
     }
 }
