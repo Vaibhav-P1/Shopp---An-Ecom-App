@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
@@ -14,6 +15,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.Button
@@ -30,6 +32,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -52,6 +55,10 @@ fun ProductDetailsPage(modifier: Modifier = Modifier, productId: String) {
 
     var context = LocalContext.current
 
+    var isFav = remember {
+        mutableStateOf(AppUtil.checkFavorite(context, productId))
+    }
+
     LaunchedEffect(Unit) {
         Firebase.firestore
             .collection("data")
@@ -72,6 +79,7 @@ fun ProductDetailsPage(modifier: Modifier = Modifier, productId: String) {
         modifier = Modifier
             .fillMaxSize()
             .padding(16.dp)
+            .statusBarsPadding()
             .verticalScroll(rememberScrollState())
     ) {
         // Product Title
@@ -142,10 +150,15 @@ fun ProductDetailsPage(modifier: Modifier = Modifier, productId: String) {
 
             Spacer(modifier = Modifier.weight(1f))
 
-            // Add to Cart Button
-            IconButton(onClick = { /* Handle add to Favorite click */ }) {
+
+            IconButton(onClick = {
+                AppUtil.addOrRemoveFromFavorite(context, productId)
+                isFav.value = AppUtil.checkFavorite(context, productId)
+            }) {
                 Icon(
-                    imageVector = Icons.Default.FavoriteBorder,
+                    imageVector = if (isFav.value) Icons.Default.Favorite
+                        else Icons.Default.FavoriteBorder,
+                    tint = if (isFav.value) Color.Red else Color.Gray,
                     contentDescription = "Add to Favorite"
                 )
             }

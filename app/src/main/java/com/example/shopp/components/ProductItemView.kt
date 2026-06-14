@@ -41,6 +41,7 @@ fun ProductItemView(modifier: Modifier = Modifier,product: ProductModel) {
     Card(
         modifier = modifier
             .padding(8.dp)
+            .padding(top = 14.dp)
             .clickable {
                 GlobalNavigation.navController.navigate("product-details/"+product.id)
             },
@@ -52,6 +53,7 @@ fun ProductItemView(modifier: Modifier = Modifier,product: ProductModel) {
     ) {
         Column(
             modifier = Modifier.padding(12.dp)
+
         ) {
             AsyncImage(
                 model = product.images.firstOrNull(),
