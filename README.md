@@ -19,7 +19,7 @@ ShopApp delivers a complete shopping experience with real-time product updates, 
 <img width="300" alt="image" src="https://github.com/user-attachments/assets/0c156775-cbf2-4620-8fe3-4302695027f2" />
 <img width="300" alt="image" src="https://github.com/user-attachments/assets/b19d1d8a-ce71-4caf-8c5f-5855622485a8" />
 <img width="300" alt="image" src="https://github.com/user-attachments/assets/a153ec0a-dda4-474b-aaab-2bc1a642e068" />
-<img width="300" alt="image" src="https://github.com/user-attachments/assets/79d1ddfa-23b6-4f86-b4ec-5bdf2d30bd8c" />
+<!-- <img width="300" alt="image" src="https://github.com/user-attachments/assets/79d1ddfa-23b6-4f86-b4ec-5bdf2d30bd8c" /> -->
 <img width="300" alt="image" src="https://github.com/user-attachments/assets/d1976975-4c0f-465f-b3aa-a67e4a8a2334" />
 <img width="300" alt="image" src="https://github.com/user-attachments/assets/33eb53e4-6f75-48db-9797-4dd9dd7b68b0" />
 <img width="300" alt="image" src="https://github.com/user-attachments/assets/2c6d0dfc-5a14-4fa5-b420-ef7ecacdff73" />
