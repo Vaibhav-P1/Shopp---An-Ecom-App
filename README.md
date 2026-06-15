@@ -8,11 +8,25 @@ ShopApp delivers a complete shopping experience with real-time product updates, 
 
 ## 📱 Screenshots
 
-> screenshots of application (Soon)
+<p align="center">
 
-| Home Screen | Product Details | Cart       | Profile    |
-| ----------- | --------------- | ---------- | ---------- |
-| Screenshot  | Screenshot      | Screenshot | Screenshot |
+<img width="300" alt="image" src="https://github.com/user-attachments/assets/f085d073-a7ed-488c-93bb-06f16e3f0be0" />
+<img width="300" alt="image" src="https://github.com/user-attachments/assets/1c1ddce2-10c2-481e-9bc6-2aee2ab134c8" />
+<img width="300" alt="image" src="https://github.com/user-attachments/assets/cd79cd13-38d7-4a84-989e-a3125b128aa2" />
+<img width="300" alt="image" src="https://github.com/user-attachments/assets/12736408-b239-4584-9a36-16b77e1bbb73" />
+<img width="300" alt="image" src="https://github.com/user-attachments/assets/00bbeedf-8d54-4fe6-b202-48d7b3b06785" />
+<img width="300" alt="image" src="https://github.com/user-attachments/assets/a330bbdf-3860-4079-abd6-c1e4a5cc8ada" />
+<img width="300" alt="image" src="https://github.com/user-attachments/assets/0c156775-cbf2-4620-8fe3-4302695027f2" />
+<img width="300" alt="image" src="https://github.com/user-attachments/assets/b19d1d8a-ce71-4caf-8c5f-5855622485a8" />
+<img width="300" alt="image" src="https://github.com/user-attachments/assets/a153ec0a-dda4-474b-aaab-2bc1a642e068" />
+<img width="300" alt="image" src="https://github.com/user-attachments/assets/79d1ddfa-23b6-4f86-b4ec-5bdf2d30bd8c" />
+<img width="300" alt="image" src="https://github.com/user-attachments/assets/d1976975-4c0f-465f-b3aa-a67e4a8a2334" />
+<img width="300" alt="image" src="https://github.com/user-attachments/assets/33eb53e4-6f75-48db-9797-4dd9dd7b68b0" />
+<img width="300" alt="image" src="https://github.com/user-attachments/assets/2c6d0dfc-5a14-4fa5-b420-ef7ecacdff73" />
+
+</p>
+
+
 
 ---
 
