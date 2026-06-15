@@ -14,6 +14,7 @@ import com.example.shopp.screen.AuthScreen
 import com.example.shopp.screen.HomeScreen
 import com.example.shopp.screen.LoginScreen
 import com.example.shopp.screen.SignupScreen
+import com.example.shopp.seller.SellerAccount
 import com.google.firebase.Firebase
 import com.google.firebase.auth.auth
 
@@ -61,6 +62,11 @@ fun AppNavigation(modifier: Modifier){
         composable("orders"){
             OrdersPage(modifier)
         }
+
+        composable("seller"){
+            SellerAccount(modifier)
+        }
+
 
     }
 }

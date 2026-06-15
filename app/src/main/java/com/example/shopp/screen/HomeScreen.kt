@@ -87,7 +87,10 @@ fun HomeScreen(modifier: Modifier = Modifier,navController: NavController){
             }
         }
     ) {
-        ContentScreen(modifier = modifier.padding(it).statusBarsPadding(), selectedIndex)
+        ContentScreen(
+            modifier = Modifier.padding(it),
+            selectedIndex = selectedIndex
+        )
     }
 }
 

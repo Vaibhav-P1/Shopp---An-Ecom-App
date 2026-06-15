@@ -2,7 +2,9 @@ package com.example.shopp.pages
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -13,7 +15,13 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.Button
+import androidx.compose.material3.ElevatedCard
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
@@ -104,29 +112,85 @@ fun ProfilePage(modifier: Modifier = Modifier) {
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            Text(text = "Address", fontSize = 18.sp, fontWeight = FontWeight.Medium)
-            TextField(
+            OutlinedTextField(
                 value = addressInput,
                 onValueChange = { addressInput = it },
                 modifier = Modifier.fillMaxWidth(),
-                keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Done),
-                keyboardActions = KeyboardActions(onDone = {
-                    //Update to Firestore
-                    if (addressInput.isNotEmpty()) {
-                        val currentUserId = FirebaseAuth.getInstance().currentUser?.uid ?: return@KeyboardActions
-                        FirebaseFirestore.getInstance()
-                            .collection("users")
-                            .document(currentUserId)
-                            .update("address", addressInput)
-                            .addOnSuccessListener {
-                                AppUtil.showToast(context, "Address updated successfully")
-                            }
-                    } else {
-                        AppUtil.showToast(context, "Address can't be empty")
-                    }
-                })
-            )
 
+                label = {
+                    Text("Enter delivery address")
+                },
+
+                placeholder = {
+                    Text("House No, Street, City, State")
+                },
+
+                trailingIcon = {
+                    IconButton(
+                        onClick = {
+                            if (addressInput.isNotEmpty()) {
+                                val currentUserId =
+                                    FirebaseAuth.getInstance().currentUser?.uid
+                                        ?: return@IconButton
+
+                                FirebaseFirestore.getInstance()
+                                    .collection("users")
+                                    .document(currentUserId)
+                                    .update("address", addressInput)
+                                    .addOnSuccessListener {
+                                        AppUtil.showToast(
+                                            context,
+                                            "Address updated successfully"
+                                        )
+                                    }
+                            } else {
+                                AppUtil.showToast(
+                                    context,
+                                    "Address can't be empty"
+                                )
+                            }
+                        }
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Check,
+                            contentDescription = "Save Address"
+                        )
+                    }
+                },
+
+                singleLine = false,
+                minLines = 2,
+
+                keyboardOptions = KeyboardOptions.Default.copy(
+                    imeAction = ImeAction.Done
+                ),
+
+                keyboardActions = KeyboardActions(
+                    onDone = {
+                        if (addressInput.isNotEmpty()) {
+                            val currentUserId =
+                                FirebaseAuth.getInstance().currentUser?.uid
+                                    ?: return@KeyboardActions
+
+                            FirebaseFirestore.getInstance()
+                                .collection("users")
+                                .document(currentUserId)
+                                .update("address", addressInput)
+                                .addOnSuccessListener {
+                                    AppUtil.showToast(
+                                        context,
+                                        "Address updated successfully"
+                                    )
+                                }
+                        } else {
+                            AppUtil.showToast(
+                                context,
+                                "Address can't be empty"
+                            )
+                        }
+                    }
+                )
+            )
             Spacer(modifier = Modifier.height(20.dp))
 
             // Immutable email reference text line
@@ -143,18 +207,55 @@ fun ProfilePage(modifier: Modifier = Modifier) {
             Spacer(modifier = Modifier.height(20.dp))
 
             // Navigation Gateway to orders list records
-            Text(
-                text = "View My Orders",
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold,
+            ElevatedCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clickable {
                         GlobalNavigation.navController.navigate("orders")
                     }
-                    .padding(vertical = 6.dp)
-            )
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = "My Orders",
+                        fontWeight = FontWeight.SemiBold
+                    )
+
+                    Text(">")
+                }
+            }
             Spacer(modifier = Modifier.height(20.dp))
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            ElevatedCard(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable {
+                        GlobalNavigation.navController.navigate("seller")
+                    }
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = "Create Seller Account",
+                        modifier = Modifier.fillMaxWidth(),
+                        textAlign = TextAlign.Center,
+                        fontWeight = FontWeight.SemiBold
+                    )
+
+
+                }
+            }
+
             // Core App Sign Out Controls Button Row Actions
             Button(
                 onClick = {
