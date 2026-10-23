@@ -73,7 +73,10 @@ fun ContentScreen(modifier: Modifier = Modifier, selectedIndex: Int, navControll
             modifier = modifier,
             onCategoryClick = { navController.navigate("category-products/$it") }
         )
-        1-> FavoritePage(modifier)
+        1-> FavoritePage(
+            modifier = modifier,
+            onProductClick = { navController.navigate("product-details/$it") }
+        )
         2-> CartPage(modifier)
         3-> ProfilePage(modifier)
     }

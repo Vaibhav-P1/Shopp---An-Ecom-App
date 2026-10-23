@@ -1,60 +1,56 @@
 package com.example.shopp.pages
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.shopp.AppUtil
+import com.example.shopp.components.EmptyView
+import com.example.shopp.components.ErrorView
+import com.example.shopp.components.LoadingView
 import com.example.shopp.components.ProductItemView
-import com.example.shopp.model.ProductModel
-import com.google.firebase.firestore.ktx.firestore
-import com.google.firebase.ktx.Firebase
+import com.example.shopp.viewmodel.CategoryProductsViewModel
+import com.example.shopp.viewmodel.UiState
 
 @Composable
-fun CategoryProductsPage(modifier: Modifier = Modifier,categoryId:String) {
-    val productList = remember { mutableStateOf<List<ProductModel>>(emptyList()) }
+fun CategoryProductsPage(
+    modifier: Modifier = Modifier,
+    onProductClick: (String) -> Unit,
+    viewModel: CategoryProductsViewModel = hiltViewModel()
+) {
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
 
-    LaunchedEffect(Unit) {
-        Firebase.firestore
-            .collection("data")
-            .document("stock")
-            .collection("products")
-            .whereEqualTo("category",categoryId)
-            .get()
-            .addOnCompleteListener {
-                if (it.isSuccessful) {
-                    val resultList = it.result.documents.mapNotNull { document ->
-                        document.toObject(ProductModel::class.java)
-                    }
-                    productList.value = resultList
-//                        .plus(resultList).plus(resultList)  it allows to show more data
+    when (val state = uiState) {
+        UiState.Loading -> LoadingView(modifier)
+        is UiState.Error -> ErrorView(state.message, onRetry = viewModel::retry, modifier = modifier)
+        is UiState.Success -> if (state.data.isEmpty()) {
+            EmptyView("No products in this category yet", modifier)
+        } else {
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(2),
+                modifier = modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                items(state.data, key = { it.id }) { product ->
+                    ProductItemView(
+                        product = product,
+                        onClick = { onProductClick(product.id) },
+                        onAddToCart = { AppUtil.addItemToCart(product.id, context) }
+                    )
                 }
             }
-    }
-    LazyColumn(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp)
-    ) {
-        items(productList.value.chunked(2)) { rowItems ->
-           Row {
-               rowItems.forEach {
-                   ProductItemView(product = it, modifier = Modifier.weight(1f))
-               }
-               // If a row has only 1 product, append an empty spacer to maintain layout sizing
-               if (rowItems.size == 1) {
-                   Spacer(modifier = Modifier.weight(1f))
-               }
-           }
         }
     }
 }

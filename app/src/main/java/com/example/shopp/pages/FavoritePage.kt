@@ -28,7 +28,7 @@ import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
 
 @Composable
-fun FavoritePage(modifier: Modifier = Modifier) {
+fun FavoritePage(modifier: Modifier = Modifier, onProductClick: (String) -> Unit) {
     val productList = remember {
         mutableStateOf<List<ProductModel>>(emptyList())
     }
@@ -85,7 +85,12 @@ fun FavoritePage(modifier: Modifier = Modifier) {
                 items(productList.value.chunked(2)) { rowItems ->
                     Row {
                         rowItems.forEach {
-                            ProductItemView(product = it, modifier = Modifier.weight(1f))
+                            ProductItemView(
+                                product = it,
+                                onClick = { onProductClick(it.id) },
+                                onAddToCart = { AppUtil.addItemToCart(it.id, context) },
+                                modifier = Modifier.weight(1f)
+                            )
                         }
                         // If a row has only 1 product, append an empty spacer to maintain layout sizing
                         if (rowItems.size == 1) {

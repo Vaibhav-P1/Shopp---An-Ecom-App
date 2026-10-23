@@ -23,7 +23,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -38,44 +37,57 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import com.example.shopp.AppUtil
+import com.example.shopp.components.ErrorView
+import com.example.shopp.components.LoadingView
 import com.example.shopp.model.ProductModel
-import com.google.firebase.firestore.ktx.firestore
-import com.google.firebase.ktx.Firebase
+import com.example.shopp.viewmodel.ProductDetailsViewModel
+import com.example.shopp.viewmodel.UiState
 import com.tbuonomo.viewpagerdotsindicator.compose.DotsIndicator
 import com.tbuonomo.viewpagerdotsindicator.compose.model.DotGraphic
 import com.tbuonomo.viewpagerdotsindicator.compose.type.ShiftIndicatorType
 
 @Composable
-fun ProductDetailsPage(modifier: Modifier = Modifier, productId: String) {
-    var product by remember { mutableStateOf(ProductModel()) }
-    val scrollState = rememberScrollState()
+fun ProductDetailsPage(
+    modifier: Modifier = Modifier,
+    viewModel: ProductDetailsViewModel = hiltViewModel()
+) {
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+    val productId = viewModel.productId
 
-    var context = LocalContext.current
+    // Favorites still live in SharedPreferences; they move to Firestore in the Wishlist step
+    var isFav by remember { mutableStateOf(AppUtil.checkFavorite(context, productId)) }
 
-    var isFav = remember {
-        mutableStateOf(AppUtil.checkFavorite(context, productId))
+    when (val state = uiState) {
+        UiState.Loading -> LoadingView(modifier)
+        is UiState.Error -> ErrorView(state.message, onRetry = viewModel::retry, modifier = modifier)
+        is UiState.Success -> ProductDetailsContent(
+            product = state.data,
+            isFavorite = isFav,
+            onToggleFavorite = {
+                AppUtil.addOrRemoveFromFavorite(context, productId)
+                isFav = AppUtil.checkFavorite(context, productId)
+            },
+            onAddToCart = { AppUtil.addItemToCart(productId = productId, context = context) },
+            modifier = modifier
+        )
     }
+}
 
-    LaunchedEffect(Unit) {
-        Firebase.firestore
-            .collection("data")
-            .document("stock")
-            .collection("products")
-            .document(productId)
-            .get()
-            .addOnCompleteListener {
-                if (it.isSuccessful) {
-                    var result = it.result.toObject(ProductModel::class.java)
-                    if (result != null) {
-                        product = result
-                    }
-                }
-            }
-    }
+@Composable
+private fun ProductDetailsContent(
+    product: ProductModel,
+    isFavorite: Boolean,
+    onToggleFavorite: () -> Unit,
+    onAddToCart: () -> Unit,
+    modifier: Modifier = Modifier
+) {
     Column(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxSize()
             .padding(16.dp)
             .statusBarsPadding()
@@ -91,24 +103,19 @@ fun ProductDetailsPage(modifier: Modifier = Modifier, productId: String) {
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        Column(
-
-        ) {
-            val pagerState = rememberPagerState(0) {
-                product.images.size
-            }
+        Column {
+            val pagerState = rememberPagerState(0) { product.images.size }
             HorizontalPager(
                 state = pagerState,
                 pageSpacing = 24.dp,
             ) {
                 AsyncImage(
-                    model = product.images.get(it),
+                    model = product.images[it],
                     contentDescription = "Product Image",
                     modifier = Modifier
-                        .height(220.dp) //can remove this{TODO}
+                        .height(220.dp)
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(16.dp))
-
                 )
             }
             Spacer(modifier = Modifier.height(10.dp))
@@ -123,7 +130,6 @@ fun ProductDetailsPage(modifier: Modifier = Modifier, productId: String) {
                 ),
                 pagerState = pagerState
             )
-
         }
         Row(
             modifier = Modifier
@@ -149,16 +155,12 @@ fun ProductDetailsPage(modifier: Modifier = Modifier, productId: String) {
 
             Spacer(modifier = Modifier.weight(1f))
 
-
-            IconButton(onClick = {
-                AppUtil.addOrRemoveFromFavorite(context, productId)
-                isFav.value = AppUtil.checkFavorite(context, productId)
-            }) {
+            IconButton(onClick = onToggleFavorite) {
                 Icon(
-                    imageVector = if (isFav.value) Icons.Default.Favorite
+                    imageVector = if (isFavorite) Icons.Default.Favorite
                         else Icons.Default.FavoriteBorder,
-                    tint = if (isFav.value) Color.Red else Color.Gray,
-                    contentDescription = "Add to Favorite"
+                    tint = if (isFavorite) Color.Red else Color.Gray,
+                    contentDescription = if (isFavorite) "Remove from favorites" else "Add to favorites"
                 )
             }
         }
@@ -166,9 +168,7 @@ fun ProductDetailsPage(modifier: Modifier = Modifier, productId: String) {
 
         // Add to Cart Primary Button
         Button(
-            onClick = {
-                AppUtil.addItemToCart(productId = productId, context = context)
-            },
+            onClick = onAddToCart,
             modifier = Modifier
                 .fillMaxWidth()
                 .height(50.dp)
@@ -191,7 +191,8 @@ fun ProductDetailsPage(modifier: Modifier = Modifier, productId: String) {
             text = product.description,
             fontSize = 16.sp
         )
-// Dynamic Product Metadata (Map items loop)
+
+        // Dynamic Product Metadata (Map items loop)
         if (product.otherDetails.isNotEmpty()) {
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -221,7 +222,6 @@ fun ProductDetailsPage(modifier: Modifier = Modifier, productId: String) {
                     )
                 }
             }
-
         }
     }
 }

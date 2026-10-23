@@ -20,7 +20,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
@@ -28,22 +27,20 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
-import com.example.shopp.AppUtil
-import com.example.shopp.GlobalNavigation
 import com.example.shopp.model.ProductModel
 
 @Composable
-fun ProductItemView(modifier: Modifier = Modifier,product: ProductModel) {
-
-    val context = LocalContext.current
-
+fun ProductItemView(
+    product: ProductModel,
+    onClick: () -> Unit,
+    onAddToCart: () -> Unit,
+    modifier: Modifier = Modifier
+) {
     Card(
         modifier = modifier
             .padding(8.dp)
             .padding(top = 14.dp)
-            .clickable {
-                GlobalNavigation.navController.navigate("product-details/"+product.id)
-            },
+            .clickable(onClick = onClick),
         shape = RoundedCornerShape(12.dp),
         elevation = CardDefaults.cardElevation(8.dp),
         colors = CardDefaults.cardColors(
@@ -97,9 +94,7 @@ fun ProductItemView(modifier: Modifier = Modifier,product: ProductModel) {
                 Spacer(modifier = Modifier.weight(1f))
 
                 // Add to Cart Button
-                IconButton(onClick = {
-                    AppUtil.addItemToCart(context = context, productId = product.id)
-                }) {
+                IconButton(onClick = onAddToCart) {
                     Icon(
                         imageVector = Icons.Default.ShoppingCart,
                         contentDescription = "Add to cart"

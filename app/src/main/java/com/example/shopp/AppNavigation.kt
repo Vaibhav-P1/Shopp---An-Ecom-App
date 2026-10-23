@@ -46,13 +46,14 @@ fun AppNavigation(modifier: Modifier){
         }
 
         composable("category-products/{categoryId}"){
-            var categoryId = it.arguments?.getString("categoryId")
-            CategoryProductsPage(modifier,categoryId?:"")
+            CategoryProductsPage(
+                modifier = modifier,
+                onProductClick = { productId -> navController.navigate("product-details/$productId") }
+            )
         }
 
         composable("product-details/{productId}"){
-            var productId = it.arguments?.getString("productId")
-            ProductDetailsPage(modifier,productId?:"")
+            ProductDetailsPage(modifier)
         }
 
         composable("checkout"){
