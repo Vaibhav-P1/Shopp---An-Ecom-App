@@ -24,8 +24,9 @@ service cloud.firestore {
     }
 
     // Orders: owners create and read their own orders; they are never edited from the client.
+    // `resource == null` lets order placement check whether an order id already exists (idempotency).
     match /orders/{orderId} {
-      allow read: if signedIn() && resource.data.userId == request.auth.uid;
+      allow read: if signedIn() && (resource == null || resource.data.userId == request.auth.uid);
       allow create: if signedIn() && request.resource.data.userId == request.auth.uid;
       allow update, delete: if false;
     }
