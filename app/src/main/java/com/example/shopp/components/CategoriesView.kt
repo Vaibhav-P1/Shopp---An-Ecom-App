@@ -15,57 +15,34 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
-import com.example.shopp.GlobalNavigation
 import com.example.shopp.model.CategoryModel
-import com.google.firebase.firestore.ktx.firestore
-import com.google.firebase.ktx.Firebase
 
 @Composable
-fun CategoriesView(modifier: Modifier = Modifier){
-    val categoryList = remember { mutableStateOf<List<CategoryModel>>(emptyList()) }
-
-    LaunchedEffect(Unit) {
-        Firebase.firestore
-            .collection("data")
-            .document("stock")
-            .collection("categories")
-            .get()
-            .addOnCompleteListener {
-                if (it.isSuccessful) {
-                    val resultList = it.result.documents.mapNotNull { document ->
-                        document.toObject(CategoryModel::class.java)
-                    }
-                    categoryList.value = resultList
-                }
-            }
-    }
+fun CategoriesView(
+    categories: List<CategoryModel>,
+    onCategoryClick: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
     LazyRow(
+        modifier = modifier,
         horizontalArrangement = Arrangement.spacedBy(20.dp)
     ) {
-        items(categoryList.value) { item ->
-            CategoryItem(category = item)
+        items(categories) { item ->
+            CategoryItem(category = item, onClick = { onCategoryClick(item.id) })
         }
     }
 }
 
 @Composable
-fun CategoryItem(category: CategoryModel) {
+fun CategoryItem(category: CategoryModel, onClick: () -> Unit) {
     Card(
         modifier = Modifier.size(100.dp)
-            .clickable {
-                GlobalNavigation.navController.navigate("category-products/"+category.id)
-            }
-                ,
+            .clickable(onClick = onClick),
         shape = RoundedCornerShape(12.dp),
         elevation = CardDefaults.cardElevation(4.dp),
         colors = CardDefaults.cardColors(

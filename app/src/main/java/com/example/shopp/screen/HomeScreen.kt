@@ -60,15 +60,19 @@ fun HomeScreen(modifier: Modifier = Modifier,navController: NavController){
     ) {
         ContentScreen(
             modifier = Modifier.padding(it),
-            selectedIndex = selectedIndex
+            selectedIndex = selectedIndex,
+            navController = navController
         )
     }
 }
 
 @Composable
-fun ContentScreen(modifier: Modifier = Modifier, selectedIndex: Int) {
+fun ContentScreen(modifier: Modifier = Modifier, selectedIndex: Int, navController: NavController) {
     when (selectedIndex) {
-        0-> HomePage(modifier)
+        0-> HomePage(
+            modifier = modifier,
+            onCategoryClick = { navController.navigate("category-products/$it") }
+        )
         1-> FavoritePage(modifier)
         2-> CartPage(modifier)
         3-> ProfilePage(modifier)

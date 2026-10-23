@@ -9,52 +9,27 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
-import com.google.firebase.firestore.ktx.firestore
-import com.google.firebase.ktx.Firebase
 import com.tbuonomo.viewpagerdotsindicator.compose.DotsIndicator
 import com.tbuonomo.viewpagerdotsindicator.compose.model.DotGraphic
 import com.tbuonomo.viewpagerdotsindicator.compose.type.ShiftIndicatorType
 
 @Composable
-fun BannerView(modifier: Modifier = Modifier) {
-
-    var bannerList by remember {
-        mutableStateOf<List<String>>(emptyList())
-    }
-
-    LaunchedEffect(Unit)  {
-        Firebase.firestore.collection("data")
-            .document("banners")
-            .get().addOnSuccessListener { document ->
-                bannerList = (document.get("urls") as? List<*>)
-                    ?.filterIsInstance<String>()
-                    .orEmpty()
-            }
-    }
-
-//    AsynImage for loading image from url
+fun BannerView(banners: List<String>, modifier: Modifier = Modifier) {
 
     Column(
         modifier = modifier
     ) {
-        val pagerState = rememberPagerState(0){
-            bannerList.size
-        }
+        val pagerState = rememberPagerState(0) { banners.size }
         HorizontalPager(
             state = pagerState,
             pageSpacing = 24.dp,
         ) {
             AsyncImage(
-                model = bannerList.get(it),
+                model = banners[it],
                 contentDescription = "Banner Image",
                 modifier = Modifier
                     .fillMaxWidth()
@@ -65,7 +40,7 @@ fun BannerView(modifier: Modifier = Modifier) {
         Spacer(modifier = Modifier.height(10.dp))
 
         DotsIndicator(
-            dotCount = bannerList.size,
+            dotCount = banners.size,
             type = ShiftIndicatorType(DotGraphic(
                 color = MaterialTheme.colorScheme.primary,
                 size = 6.dp
@@ -74,8 +49,4 @@ fun BannerView(modifier: Modifier = Modifier) {
         )
 
     }
-
-
-
-
 }
