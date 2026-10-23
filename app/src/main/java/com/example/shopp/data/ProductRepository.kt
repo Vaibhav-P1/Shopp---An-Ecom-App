@@ -9,6 +9,13 @@ import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 import javax.inject.Singleton
 
+/** Opaque marker for "continue after this product" in a paged query. */
+class PageCursor internal constructor(internal val snapshot: DocumentSnapshot)
+
+class ProductPage(val items: List<ProductModel>, val nextCursor: PageCursor?) {
+    val endReached: Boolean get() = nextCursor == null
+}
+
 @Singleton
 class ProductRepository @Inject constructor(
     private val firestore: FirebaseFirestore
@@ -17,10 +24,27 @@ class ProductRepository @Inject constructor(
     private val products: CollectionReference
         get() = firestore.collection("data").document("stock").collection("products")
 
-    suspend fun getProductsByCategory(categoryId: String): Result<List<ProductModel>> = firestoreCall {
-        products.whereEqualTo("category", categoryId).get().await()
-            .documents
-            .mapNotNull { it.toProduct() }
+    /**
+     * One page of a category, ordered by document id so the cursor is stable. Pass the previous page's
+     * [ProductPage.nextCursor] to continue; it is null once the last page has been returned.
+     */
+    suspend fun getProductsByCategory(
+        categoryId: String,
+        cursor: PageCursor? = null,
+        pageSize: Int = PAGE_SIZE
+    ): Result<ProductPage> = firestoreCall {
+        var query = products
+            .whereEqualTo("category", categoryId)
+            .orderBy(FieldPath.documentId())
+            .limit(pageSize.toLong())
+        if (cursor != null) query = query.startAfter(cursor.snapshot)
+
+        val documents = query.get().await().documents
+        ProductPage(
+            items = documents.mapNotNull { it.toProduct() },
+            // A full page may still be the last one; the next request then returns an empty page
+            nextCursor = if (documents.size < pageSize) null else documents.lastOrNull()?.let(::PageCursor)
+        )
     }
 
     suspend fun getProduct(productId: String): Result<ProductModel> = firestoreCall {
@@ -35,6 +59,10 @@ class ProductRepository @Inject constructor(
                 .documents
                 .mapNotNull { it.toProduct() }
         }
+    }
+
+    private companion object {
+        const val PAGE_SIZE = 10
     }
 
     private fun DocumentSnapshot.toProduct(): ProductModel? =
