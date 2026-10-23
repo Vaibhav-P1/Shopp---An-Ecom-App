@@ -3,6 +3,8 @@ package com.example.shopp.viewmodel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.navigation.toRoute
+import com.example.shopp.CategoryProducts
 import com.example.shopp.data.ProductRepository
 import com.example.shopp.model.ProductModel
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -18,7 +20,7 @@ class CategoryProductsViewModel @Inject constructor(
     private val repository: ProductRepository
 ) : ViewModel() {
 
-    private val categoryId: String = savedStateHandle["categoryId"] ?: ""
+    private val categoryId: String = savedStateHandle.toRoute<CategoryProducts>().categoryId
 
     private val _uiState = MutableStateFlow<UiState<List<ProductModel>>>(UiState.Loading)
     val uiState: StateFlow<UiState<List<ProductModel>>> = _uiState.asStateFlow()

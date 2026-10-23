@@ -31,13 +31,17 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.navigation.NavHostController
 import com.example.shopp.R
 import com.example.shopp.viewmodel.AuthViewModel
 
 
 @Composable
-fun AuthScreen(modifier: Modifier = Modifier, navController: NavHostController) {
+fun AuthScreen(
+    modifier: Modifier = Modifier,
+    onLoginClick: () -> Unit,
+    onSignupClick: () -> Unit,
+    onAuthenticated: () -> Unit
+) {
 
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -45,7 +49,7 @@ fun AuthScreen(modifier: Modifier = Modifier, navController: NavHostController) 
     val webClientId = context.getString(R.string.default_web_client_id)
     val uiState by authViewModel.uiState.collectAsStateWithLifecycle()
     val isLoading = uiState.isLoading
-    AuthEventsEffect(authViewModel, navController)
+    AuthEventsEffect(authViewModel, onAuthenticated)
 
     Column(
         modifier = modifier.fillMaxSize().padding(32.dp),
@@ -79,7 +83,7 @@ fun AuthScreen(modifier: Modifier = Modifier, navController: NavHostController) 
 
         Spacer(modifier = Modifier.height(20.dp))
 
-        Button(onClick = { navController.navigate("login") },
+        Button(onClick = { onLoginClick() },
             modifier = Modifier.fillMaxWidth()
                 .height(60.dp)
         ) {
@@ -88,7 +92,7 @@ fun AuthScreen(modifier: Modifier = Modifier, navController: NavHostController) 
 
         Spacer(modifier = Modifier.height(20.dp))
 
-        OutlinedButton(onClick = { navController.navigate("signup") },
+        OutlinedButton(onClick = { onSignupClick() },
             modifier = Modifier.fillMaxWidth()
                 .height(60.dp)
         ) {

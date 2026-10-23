@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.ui.Modifier
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import com.example.shopp.data.AuthRepository
 import com.example.shopp.payment.PaymentResult
 import com.example.shopp.payment.PaymentResultBus
 import com.example.shopp.ui.theme.ShoppTheme
@@ -20,6 +21,7 @@ import javax.inject.Inject
 class MainActivity : ComponentActivity(), PaymentResultListener {
 
     @Inject lateinit var paymentResultBus: PaymentResultBus
+    @Inject lateinit var authRepository: AuthRepository
 
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen() // must run before super.onCreate
@@ -28,7 +30,7 @@ class MainActivity : ComponentActivity(), PaymentResultListener {
         setContent {
             ShoppTheme {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    AppNavigation(Modifier.padding(innerPadding))
+                    AppNavigation(Modifier.padding(innerPadding), isLoggedIn = authRepository.isLoggedIn)
                 }
             }
         }

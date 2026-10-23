@@ -2,6 +2,7 @@ package com.example.shopp
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -15,71 +16,84 @@ import com.example.shopp.screen.HomeScreen
 import com.example.shopp.screen.LoginScreen
 import com.example.shopp.screen.SignupScreen
 import com.example.shopp.seller.SellerAccount
-import com.google.firebase.Firebase
-import com.google.firebase.auth.auth
 
 @Composable
-fun AppNavigation(modifier: Modifier){
+fun AppNavigation(modifier: Modifier, isLoggedIn: Boolean) {
 
     val navController = rememberNavController()
 
-    val isLoggedIn = Firebase.auth.currentUser != null
-    val firstPage = if(isLoggedIn) "home" else "auth"
+    NavHost(navController = navController, startDestination = if (isLoggedIn) Home else Auth) {
 
-    NavHost(navController = navController, startDestination = firstPage){
-
-        composable("auth"){
-            AuthScreen(modifier,navController)
-        }
-
-        composable("login"){
-            LoginScreen(modifier,navController)
-        }
-
-        composable("signup"){
-            SignupScreen(modifier,navController)
-        }
-
-        composable("home"){
-            HomeScreen(modifier,navController)
-        }
-
-        composable("category-products/{categoryId}"){
-            CategoryProductsPage(
+        composable<Auth> {
+            AuthScreen(
                 modifier = modifier,
-                onProductClick = { productId -> navController.navigate("product-details/$productId") }
+                onLoginClick = { navController.navigate(Login) },
+                onSignupClick = { navController.navigate(Signup) },
+                onAuthenticated = { navController.goHomeAfterAuth() }
             )
         }
 
-        composable("product-details/{productId}"){
-            ProductDetailsPage(modifier)
+        composable<Login> {
+            LoginScreen(modifier = modifier, onAuthenticated = { navController.goHomeAfterAuth() })
         }
 
-        composable("checkout"){
-            CheckoutPage(
+        composable<Signup> {
+            SignupScreen(modifier = modifier, onAuthenticated = { navController.goHomeAfterAuth() })
+        }
+
+        composable<Home> {
+            HomeScreen(
                 modifier = modifier,
-                onOrderPlaced = {
-                    // Wipe the back stack so Back can't return to checkout
-                    navController.navigate("home") { popUpTo(0) { inclusive = true } }
+                onCategoryClick = { navController.navigate(CategoryProducts(it)) },
+                onProductClick = { navController.navigate(ProductDetails(it)) },
+                onCheckout = { navController.navigate(Checkout) },
+                onOrdersClick = { navController.navigate(Orders) },
+                onSellerClick = { navController.navigate(Seller) },
+                onSignedOut = {
+                    // Clear the whole back stack so Back can't return into the signed-out app
+                    navController.navigate(Auth) { popUpTo(0) { inclusive = true } }
                 }
             )
         }
 
-        composable("orders"){
-            OrdersPage(
+        composable<CategoryProducts> {
+            CategoryProductsPage(
                 modifier = modifier,
-                onOrderClick = { orderId -> navController.navigate("order-details/$orderId") }
+                onProductClick = { productId -> navController.navigate(ProductDetails(productId)) }
             )
         }
 
-        composable("order-details/{orderId}"){
+        composable<ProductDetails> {
+            ProductDetailsPage(modifier)
+        }
+
+        composable<Checkout> {
+            CheckoutPage(
+                modifier = modifier,
+                onOrderPlaced = {
+                    // Wipe the back stack so Back can't return to checkout
+                    navController.navigate(Home) { popUpTo(0) { inclusive = true } }
+                }
+            )
+        }
+
+        composable<Orders> {
+            OrdersPage(
+                modifier = modifier,
+                onOrderClick = { orderId -> navController.navigate(OrderDetails(orderId)) }
+            )
+        }
+
+        composable<OrderDetails> {
             OrderDetailsPage(modifier)
         }
 
-        composable("seller"){
+        composable<Seller> {
             SellerAccount(modifier)
         }
-
-
     }
+}
+
+private fun NavHostController.goHomeAfterAuth() {
+    navigate(Home) { popUpTo<Auth> { inclusive = true } }
 }

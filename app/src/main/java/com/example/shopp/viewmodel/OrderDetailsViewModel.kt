@@ -3,6 +3,8 @@ package com.example.shopp.viewmodel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.navigation.toRoute
+import com.example.shopp.OrderDetails
 import com.example.shopp.data.OrderRepository
 import com.example.shopp.model.OrderModel
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -18,7 +20,7 @@ class OrderDetailsViewModel @Inject constructor(
     private val repository: OrderRepository
 ) : ViewModel() {
 
-    private val orderId: String = savedStateHandle["orderId"] ?: ""
+    private val orderId: String = savedStateHandle.toRoute<OrderDetails>().orderId
 
     private val _uiState = MutableStateFlow<UiState<OrderModel>>(UiState.Loading)
     val uiState: StateFlow<UiState<OrderModel>> = _uiState.asStateFlow()

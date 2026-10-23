@@ -28,12 +28,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.navigation.NavController
 import com.example.shopp.R
 import com.example.shopp.viewmodel.AuthViewModel
 
 @Composable
-fun SignupScreen(modifier: Modifier = Modifier, navController: NavController, authViewModel: AuthViewModel = hiltViewModel()) {
+fun SignupScreen(modifier: Modifier = Modifier, onAuthenticated: () -> Unit, authViewModel: AuthViewModel = hiltViewModel()) {
 
     var email by remember { mutableStateOf("") }
     var name by remember { mutableStateOf("") }
@@ -42,7 +41,7 @@ fun SignupScreen(modifier: Modifier = Modifier, navController: NavController, au
 
     val uiState by authViewModel.uiState.collectAsStateWithLifecycle()
     val isLoading = uiState.isLoading
-    AuthEventsEffect(authViewModel, navController)
+    AuthEventsEffect(authViewModel, onAuthenticated)
 
 
 

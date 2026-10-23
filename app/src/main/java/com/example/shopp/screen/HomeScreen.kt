@@ -18,14 +18,21 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.navigation.NavController
 import com.example.shopp.pages.CartPage
 import com.example.shopp.pages.FavoritePage
 import com.example.shopp.pages.HomePage
 import com.example.shopp.pages.ProfilePage
 
 @Composable
-fun HomeScreen(modifier: Modifier = Modifier,navController: NavController){
+fun HomeScreen(
+    modifier: Modifier = Modifier,
+    onCategoryClick: (String) -> Unit,
+    onProductClick: (String) -> Unit,
+    onCheckout: () -> Unit,
+    onOrdersClick: () -> Unit,
+    onSellerClick: () -> Unit,
+    onSignedOut: () -> Unit
+){
 
     val navItemList = listOf(
         NavItem("Home", Icons.Default.Home),
@@ -61,35 +68,36 @@ fun HomeScreen(modifier: Modifier = Modifier,navController: NavController){
         ContentScreen(
             modifier = Modifier.padding(it),
             selectedIndex = selectedIndex,
-            navController = navController
+            onCategoryClick = onCategoryClick,
+            onProductClick = onProductClick,
+            onCheckout = onCheckout,
+            onOrdersClick = onOrdersClick,
+            onSellerClick = onSellerClick,
+            onSignedOut = onSignedOut
         )
     }
 }
 
 @Composable
-fun ContentScreen(modifier: Modifier = Modifier, selectedIndex: Int, navController: NavController) {
+fun ContentScreen(
+    modifier: Modifier = Modifier,
+    selectedIndex: Int,
+    onCategoryClick: (String) -> Unit,
+    onProductClick: (String) -> Unit,
+    onCheckout: () -> Unit,
+    onOrdersClick: () -> Unit,
+    onSellerClick: () -> Unit,
+    onSignedOut: () -> Unit
+) {
     when (selectedIndex) {
-        0-> HomePage(
-            modifier = modifier,
-            onCategoryClick = { navController.navigate("category-products/$it") }
-        )
-        1-> FavoritePage(
-            modifier = modifier,
-            onProductClick = { navController.navigate("product-details/$it") }
-        )
-        2-> CartPage(
-            modifier = modifier,
-            onCheckout = { navController.navigate("checkout") },
-            onProductClick = { navController.navigate("product-details/$it") }
-        )
+        0-> HomePage(modifier = modifier, onCategoryClick = onCategoryClick)
+        1-> FavoritePage(modifier = modifier, onProductClick = onProductClick)
+        2-> CartPage(modifier = modifier, onCheckout = onCheckout, onProductClick = onProductClick)
         3-> ProfilePage(
             modifier = modifier,
-            onOrdersClick = { navController.navigate("orders") },
-            onSellerClick = { navController.navigate("seller") },
-            onSignedOut = {
-                // Clear the whole back stack so Back can't return into the signed-out app
-                navController.navigate("auth") { popUpTo(0) { inclusive = true } }
-            }
+            onOrdersClick = onOrdersClick,
+            onSellerClick = onSellerClick,
+            onSignedOut = onSignedOut
         )
     }
 }

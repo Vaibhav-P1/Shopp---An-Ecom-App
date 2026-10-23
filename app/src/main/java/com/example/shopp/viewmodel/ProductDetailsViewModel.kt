@@ -3,6 +3,8 @@ package com.example.shopp.viewmodel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.navigation.toRoute
+import com.example.shopp.ProductDetails
 import com.example.shopp.data.FavoritesRepository
 import com.example.shopp.data.ProductRepository
 import com.example.shopp.model.ProductModel
@@ -26,7 +28,7 @@ class ProductDetailsViewModel @Inject constructor(
     private val favoritesRepository: FavoritesRepository
 ) : ViewModel() {
 
-    val productId: String = savedStateHandle["productId"] ?: ""
+    val productId: String = savedStateHandle.toRoute<ProductDetails>().productId
 
     private val _uiState = MutableStateFlow<UiState<ProductModel>>(UiState.Loading)
     val uiState: StateFlow<UiState<ProductModel>> = _uiState.asStateFlow()
