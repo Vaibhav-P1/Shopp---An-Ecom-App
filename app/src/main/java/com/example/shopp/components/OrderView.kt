@@ -17,6 +17,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.shopp.AppUtil
+import com.example.shopp.domain.Money
 import com.example.shopp.model.OrderModel
 
 @Composable
@@ -64,6 +65,14 @@ fun OrderView(orderItem: OrderModel, modifier: Modifier = Modifier) {
                 fontSize = 14.sp,
                 fontWeight = FontWeight.SemiBold
             )
+
+            if (orderItem.totalPaise > 0) {
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "Total: ${Money.format(orderItem.totalPaise)} · ${orderItem.paymentMethod}",
+                    fontSize = 14.sp
+                )
+            }
 
         }
     }

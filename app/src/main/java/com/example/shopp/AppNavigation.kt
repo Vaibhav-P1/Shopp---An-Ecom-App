@@ -57,7 +57,13 @@ fun AppNavigation(modifier: Modifier){
         }
 
         composable("checkout"){
-            CheckoutPage(modifier)
+            CheckoutPage(
+                modifier = modifier,
+                onOrderPlaced = {
+                    // Wipe the back stack so Back can't return to checkout
+                    navController.navigate("home") { popUpTo(0) { inclusive = true } }
+                }
+            )
         }
 
         composable("orders"){

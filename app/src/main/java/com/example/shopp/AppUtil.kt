@@ -1,102 +1,16 @@
 package com.example.shopp
 
-import android.app.Activity
 import android.content.Context
 import android.widget.Toast
 import androidx.core.content.edit
-import com.example.shopp.model.OrderModel
 import com.google.firebase.Timestamp
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.FieldValue
-import com.google.firebase.firestore.ktx.firestore
-import com.google.firebase.ktx.Firebase
-import com.razorpay.Checkout
-import org.json.JSONObject
 import java.text.SimpleDateFormat
 import java.util.Locale
-import java.util.UUID
 
 object AppUtil {
 
     fun showToast(context: Context, message: String) {
         Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
-    }
-
-    // Firestore returns cart quantities as Long, but never trust the raw cast
-    private fun parseCart(raw: Any?): Map<String, Long> =
-        (raw as? Map<*, *>)
-            ?.mapNotNull { (key, value) ->
-                val productId = key as? String ?: return@mapNotNull null
-                val qty = (value as? Number)?.toLong() ?: return@mapNotNull null
-                productId to qty
-            }
-            ?.toMap()
-            .orEmpty()
-
-    fun clearCartAndAddToOrders() {
-        val currentUserId = FirebaseAuth.getInstance().currentUser?.uid ?: return
-        val userDoc = Firebase.firestore.collection("users").document(currentUserId)
-
-        userDoc.get().addOnCompleteListener {
-            if (it.isSuccessful) {
-                val currentCart = parseCart(it.result.get("cartItems"))
-                if (currentCart.isEmpty()) return@addOnCompleteListener
-
-                val order = OrderModel(
-                    id = "ORD_" + UUID.randomUUID().toString().replace("-", "").take(10).uppercase(),
-                    userId = currentUserId,
-                    date = Timestamp.now(),
-                    items = currentCart,
-                    status = "ORDERED",
-                    address = it.result.getString("address").orEmpty()
-                )
-                Firebase.firestore
-                    .collection("orders")
-                    .document(order.id)
-                    .set(order)
-                    .addOnCompleteListener { orderTask ->
-                        if (orderTask.isSuccessful) {
-                            userDoc.update("cartItems", FieldValue.delete())
-                        }
-                    }
-            }
-        }
-    }
-
-    fun getDiscountPercentage(): Float {
-        return 10.0f // Represents a 10% discount
-    }
-
-    fun getTaxPercentage(): Float {
-        return 13.0f // Represents a 13% tax rule
-    }
-
-    fun razorpayApiKey() : String{
-        return BuildConfig.RAZORPAY_KEY
-    }
-
-    fun startPayment(amount: Float) {
-        val checkout = Checkout()
-        checkout.setKeyID(razorpayApiKey())
-
-        try {
-            val options = JSONObject()
-            options.put("name", "Shopp")
-            options.put("description", "E-commerce Order Payment Transaction")
-
-            // Gateway accepts amounts in the smallest unit (paise); round, don't truncate
-            val calculatedSubunitAmount = Math.round(amount * 100)
-            options.put("amount", calculatedSubunitAmount)
-
-            options.put("currency", "INR")
-
-            val currentActivityContext = GlobalNavigation.navController.context as? Activity
-                ?: return
-            checkout.open(currentActivityContext, options)
-
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
     }
 
     fun formatDate(timestamp: Timestamp): String {

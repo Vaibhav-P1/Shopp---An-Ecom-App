@@ -1,6 +1,5 @@
 package com.example.shopp
 
-import android.app.AlertDialog
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -10,12 +9,18 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.ui.Modifier
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import com.example.shopp.payment.PaymentResult
+import com.example.shopp.payment.PaymentResultBus
 import com.example.shopp.ui.theme.ShoppTheme
 import com.razorpay.PaymentResultListener
 import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity(), PaymentResultListener {
+
+    @Inject lateinit var paymentResultBus: PaymentResultBus
+
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen() // must run before super.onCreate
         super.onCreate(savedInstanceState)
@@ -29,33 +34,11 @@ class MainActivity : ComponentActivity(), PaymentResultListener {
         }
     }
 
-    override fun onPaymentSuccess(p0: String?) {
-//        AppUtil.showToast(this,"Payment Successful")
-
-        AppUtil.clearCartAndAddToOrders()
-
-        // Construct interactive UX confirmation prompt modal blocks
-        val builder = AlertDialog.Builder(this)
-        builder.setTitle("Payment Successful")
-        .setMessage("Thank you! Your payment was completed successfully, and your order has been placed.")
-
-        .setPositiveButton("OK") { _ , _ ->
-            val navController = GlobalNavigation.navController
-            // Wipe the back stack so Back can't return to checkout
-            navController.navigate("home") {
-                popUpTo(0) { inclusive = true }
-            }
-        }
-        .setCancelable(false)
-            .show()
-//        confirmationDialog.show()
-
+    override fun onPaymentSuccess(paymentId: String?) {
+        paymentResultBus.publish(PaymentResult.Success(paymentId.orEmpty()))
     }
 
-    override fun onPaymentError(p0: Int, p1: String?) {
-        AppUtil.showToast(this,"Payment Failed")
+    override fun onPaymentError(code: Int, message: String?) {
+        paymentResultBus.publish(PaymentResult.Failure("Payment failed" + message?.let { ": $it" }.orEmpty()))
     }
 }
-
-
-

@@ -37,6 +37,12 @@ class CartRepository @Inject constructor(
         awaitClose { registration.remove() }
     }
 
+    /** One-shot read of the current cart (productId -> quantity). */
+    suspend fun getCart(): Result<Map<String, Long>> = firestoreCall {
+        val doc = userDoc() ?: return@firestoreCall emptyMap()
+        parseCart(doc.get().await().get("cartItems"))
+    }
+
     /** Atomic increment, so rapid taps can't overwrite each other. Creates the user doc if missing. */
     suspend fun addItem(productId: String): Result<Unit> = firestoreCall {
         val doc = userDoc() ?: throw IllegalStateException("Please sign in first")
