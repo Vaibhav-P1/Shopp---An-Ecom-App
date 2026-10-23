@@ -38,241 +38,177 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.shopp.AppUtil
-import com.example.shopp.GlobalNavigation
 import com.example.shopp.R
-import com.example.shopp.model.UserModel
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.FirebaseFirestore
-
-
+import com.example.shopp.components.ErrorView
+import com.example.shopp.components.LoadingView
+import com.example.shopp.viewmodel.ProfileData
+import com.example.shopp.viewmodel.ProfileEvent
+import com.example.shopp.viewmodel.ProfileViewModel
+import com.example.shopp.viewmodel.UiState
 
 @Composable
-fun ProfilePage(modifier: Modifier = Modifier) {
-
-    var userModel = remember { mutableStateOf(UserModel()) }
-    var addressInput by remember { mutableStateOf(userModel.value.address) }
+fun ProfilePage(
+    modifier: Modifier = Modifier,
+    onOrdersClick: () -> Unit,
+    onSellerClick: () -> Unit,
+    onSignedOut: () -> Unit,
+    viewModel: ProfileViewModel = hiltViewModel()
+) {
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
-    val scrollState = rememberScrollState()
 
     LaunchedEffect(Unit) {
-        val currentUserId = FirebaseAuth.getInstance().currentUser?.uid ?: return@LaunchedEffect
-        FirebaseFirestore.getInstance()
-            .collection("users")
-            .document(currentUserId)
-            .get()
-            .addOnCompleteListener {
-                if (it.isSuccessful) {
-                    val result = it.result.toObject(UserModel::class.java)
-                    if (result != null) {
-                        userModel.value = result
-                        addressInput = userModel.value.address
-
-                    }
-                }
+        viewModel.events.collect { event ->
+            when (event) {
+                is ProfileEvent.Message -> AppUtil.showToast(context, event.text)
+                ProfileEvent.SignedOut -> onSignedOut()
             }
+        }
     }
 
-        Column(
+    when (val state = uiState) {
+        UiState.Loading -> LoadingView(modifier)
+        is UiState.Error -> ErrorView(state.message, onRetry = viewModel::retry, modifier = modifier)
+        is UiState.Success -> ProfileContent(
+            data = state.data,
+            onSaveAddress = viewModel::saveAddress,
+            onOrdersClick = onOrdersClick,
+            onSellerClick = onSellerClick,
+            onSignOut = viewModel::signOut,
+            modifier = modifier
+        )
+    }
+}
+
+@Composable
+private fun ProfileContent(
+    data: ProfileData,
+    onSaveAddress: (String) -> Unit,
+    onOrdersClick: () -> Unit,
+    onSellerClick: () -> Unit,
+    onSignOut: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var addressInput by remember(data.user.address) { mutableStateOf(data.user.address) }
+
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .padding(16.dp)
+            .verticalScroll(rememberScrollState())
+            .statusBarsPadding()
+    ) {
+        Text(
+            text = "Your Profile",
+            fontSize = 22.sp,
+            fontWeight = FontWeight.Bold
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Image(
+            painter = painterResource(id = R.drawable.profile),
+            contentDescription = "Profile Icon",
             modifier = Modifier
-                .fillMaxSize()
-                .padding(16.dp)
-                .verticalScroll(scrollState)
-                .statusBarsPadding()
+                .fillMaxWidth()
+                .height(150.dp)
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Text(
+            text = data.user.name,
+            fontSize = 22.sp,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.fillMaxWidth(),
+            textAlign = TextAlign.Center
+        )
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+        OutlinedTextField(
+            value = addressInput,
+            onValueChange = { addressInput = it },
+            modifier = Modifier.fillMaxWidth(),
+            label = { Text("Enter delivery address") },
+            placeholder = { Text("House No, Street, City, State") },
+            trailingIcon = {
+                IconButton(onClick = { onSaveAddress(addressInput) }) {
+                    Icon(
+                        imageVector = Icons.Default.Check,
+                        contentDescription = "Save Address"
+                    )
+                }
+            },
+            singleLine = false,
+            minLines = 2,
+            keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Done),
+            keyboardActions = KeyboardActions(onDone = { onSaveAddress(addressInput) })
+        )
+        Spacer(modifier = Modifier.height(20.dp))
+
+        Text(text = "Email:", fontSize = 18.sp, fontWeight = FontWeight.Medium)
+        Text(text = data.user.email, fontSize = 16.sp)
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        Text(text = "Number of items in cart", fontSize = 18.sp, fontWeight = FontWeight.Medium)
+        Text(text = "${data.cartItemCount} items", fontSize = 16.sp)
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+        ElevatedCard(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onOrdersClick)
         ) {
-            Text(
-                text = "Your Profile",
-                fontSize = 22.sp,
-                fontWeight = FontWeight.Bold
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Profile Avatar Render (expects profile_icon drawable resource asset)
-            Image(
-                painter = painterResource(id = R.drawable.profile),
-                contentDescription = "Profile Icon",
+            Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(150.dp)
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Username Render Text line
-            Text(
-                text = userModel.value.name,
-                fontSize = 22.sp,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.fillMaxWidth(),
-                textAlign = TextAlign.Center
-            )
-
-            Spacer(modifier = Modifier.height(20.dp))
-
-            OutlinedTextField(
-                value = addressInput,
-                onValueChange = { addressInput = it },
-                modifier = Modifier.fillMaxWidth(),
-
-                label = {
-                    Text("Enter delivery address")
-                },
-
-                placeholder = {
-                    Text("House No, Street, City, State")
-                },
-
-                trailingIcon = {
-                    IconButton(
-                        onClick = {
-                            if (addressInput.isNotEmpty()) {
-                                val currentUserId =
-                                    FirebaseAuth.getInstance().currentUser?.uid
-                                        ?: return@IconButton
-
-                                FirebaseFirestore.getInstance()
-                                    .collection("users")
-                                    .document(currentUserId)
-                                    .update("address", addressInput)
-                                    .addOnSuccessListener {
-                                        AppUtil.showToast(
-                                            context,
-                                            "Address updated successfully"
-                                        )
-                                    }
-                            } else {
-                                AppUtil.showToast(
-                                    context,
-                                    "Address can't be empty"
-                                )
-                            }
-                        }
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Check,
-                            contentDescription = "Save Address"
-                        )
-                    }
-                },
-
-                singleLine = false,
-                minLines = 2,
-
-                keyboardOptions = KeyboardOptions.Default.copy(
-                    imeAction = ImeAction.Done
-                ),
-
-                keyboardActions = KeyboardActions(
-                    onDone = {
-                        if (addressInput.isNotEmpty()) {
-                            val currentUserId =
-                                FirebaseAuth.getInstance().currentUser?.uid
-                                    ?: return@KeyboardActions
-
-                            FirebaseFirestore.getInstance()
-                                .collection("users")
-                                .document(currentUserId)
-                                .update("address", addressInput)
-                                .addOnSuccessListener {
-                                    AppUtil.showToast(
-                                        context,
-                                        "Address updated successfully"
-                                    )
-                                }
-                        } else {
-                            AppUtil.showToast(
-                                context,
-                                "Address can't be empty"
-                            )
-                        }
-                    }
+                    .padding(16.dp),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = "My Orders",
+                    fontWeight = FontWeight.SemiBold
                 )
-            )
-            Spacer(modifier = Modifier.height(20.dp))
 
-            // Immutable email reference text line
-            Text(text = "Email:", fontSize = 18.sp, fontWeight = FontWeight.Medium)
-            Text(text = userModel.value.email, fontSize = 16.sp)
-
-            Spacer(modifier = Modifier.height(10.dp))
-
-            // Total Accumulated quantities sum output display metric
-            val totalCartItemsCount = userModel.value.cartItems.values.sum()
-            Text(text = "Number of items in cart", fontSize = 18.sp, fontWeight = FontWeight.Medium)
-            Text(text = "$totalCartItemsCount items", fontSize = 16.sp)
-
-            Spacer(modifier = Modifier.height(20.dp))
-
-            // Navigation Gateway to orders list records
-            ElevatedCard(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable {
-                        GlobalNavigation.navController.navigate("orders")
-                    }
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text(
-                        text = "My Orders",
-                        fontWeight = FontWeight.SemiBold
-                    )
-
-                    Text(">")
-                }
+                Text(">")
             }
-            Spacer(modifier = Modifier.height(20.dp))
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            ElevatedCard(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable {
-                        GlobalNavigation.navController.navigate("seller")
-                    }
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text(
-                        text = "Create Seller Account",
-                        modifier = Modifier.fillMaxWidth(),
-                        textAlign = TextAlign.Center,
-                        fontWeight = FontWeight.SemiBold
-                    )
-
-
-                }
-            }
-
-            // Core App Sign Out Controls Button Row Actions
-            Button(
-                onClick = {
-                    FirebaseAuth.getInstance().signOut()
-                    val navController = GlobalNavigation.navController
-                    // Clear the whole back stack so Back can't return into the signed-out app
-                    navController.navigate("auth") {
-                        popUpTo(0) { inclusive = true }
-                    }
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .align(Alignment.CenterHorizontally)
-            ) {
-                Text(text = "Sign Out", fontSize = 18.sp)
-            }
-
-
         }
 
+        Spacer(modifier = Modifier.height(32.dp))
 
+        ElevatedCard(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onSellerClick)
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = "Create Seller Account",
+                    modifier = Modifier.fillMaxWidth(),
+                    textAlign = TextAlign.Center,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+        }
+
+        Button(
+            onClick = onSignOut,
+            modifier = Modifier
+                .fillMaxWidth()
+                .align(Alignment.CenterHorizontally)
+        ) {
+            Text(text = "Sign Out", fontSize = 18.sp)
+        }
+    }
 }

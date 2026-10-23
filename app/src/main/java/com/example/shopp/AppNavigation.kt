@@ -2,7 +2,6 @@ package com.example.shopp
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -23,7 +22,6 @@ import com.google.firebase.auth.auth
 fun AppNavigation(modifier: Modifier){
 
     val navController = rememberNavController()
-    GlobalNavigation.navController = navController
 
     val isLoggedIn = Firebase.auth.currentUser != null
     val firstPage = if(isLoggedIn) "home" else "auth"
@@ -84,8 +82,4 @@ fun AppNavigation(modifier: Modifier){
 
 
     }
-}
-
-object GlobalNavigation{
-    lateinit var navController: NavHostController
 }

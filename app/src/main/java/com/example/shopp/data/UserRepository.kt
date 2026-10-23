@@ -3,6 +3,7 @@ package com.example.shopp.data
 import com.example.shopp.model.UserModel
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.SetOptions
 import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -26,5 +27,13 @@ class UserRepository @Inject constructor(
         firestore.collection("users").document(uid).get().await()
             .getString("name").orEmpty()
             .trim().substringBefore(' ')
+    }
+
+    /** Saves the delivery address. Merges, so it also works for an account whose profile doc is missing. */
+    suspend fun updateAddress(address: String): Result<Unit> = firestoreCall {
+        val uid = auth.currentUser?.uid ?: throw IllegalStateException("Please sign in first")
+        firestore.collection("users").document(uid)
+            .set(mapOf("address" to address.trim()), SetOptions.merge()).await()
+        Unit
     }
 }

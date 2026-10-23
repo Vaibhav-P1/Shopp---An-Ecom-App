@@ -82,7 +82,15 @@ fun ContentScreen(modifier: Modifier = Modifier, selectedIndex: Int, navControll
             onCheckout = { navController.navigate("checkout") },
             onProductClick = { navController.navigate("product-details/$it") }
         )
-        3-> ProfilePage(modifier)
+        3-> ProfilePage(
+            modifier = modifier,
+            onOrdersClick = { navController.navigate("orders") },
+            onSellerClick = { navController.navigate("seller") },
+            onSignedOut = {
+                // Clear the whole back stack so Back can't return into the signed-out app
+                navController.navigate("auth") { popUpTo(0) { inclusive = true } }
+            }
+        )
     }
 }
 
