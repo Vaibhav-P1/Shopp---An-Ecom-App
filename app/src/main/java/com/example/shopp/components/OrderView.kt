@@ -15,7 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.shopp.AppUtil
+import com.example.shopp.ui.formatDate
 import com.example.shopp.domain.Money
 import com.example.shopp.model.OrderModel
 
@@ -43,7 +43,7 @@ fun OrderView(orderItem: OrderModel, onClick: () -> Unit, modifier: Modifier = M
 
             Spacer(modifier = Modifier.height(4.dp))
             Text(
-                text = "Date: ${AppUtil.formatDate(orderItem.date)}",
+                text = "Date: ${orderItem.date.formatDate()}",
                 fontSize = 14.sp
             )
 

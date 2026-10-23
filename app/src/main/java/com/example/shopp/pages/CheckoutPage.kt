@@ -35,7 +35,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.example.shopp.AppUtil
+import com.example.shopp.ui.showToast
 import com.example.shopp.components.ErrorView
 import com.example.shopp.components.LoadingView
 import com.example.shopp.data.PaymentMethod
@@ -63,13 +63,13 @@ fun CheckoutPage(
                 is CheckoutEvent.StartPayment -> {
                     val activity = context.findActivity()
                     if (activity == null) {
-                        AppUtil.showToast(context, "Could not open the payment screen")
+                        context.showToast("Could not open the payment screen")
                     } else {
                         PaymentLauncher.start(activity, event.amountPaise, event.orderId)
                     }
                 }
                 is CheckoutEvent.OrderPlaced -> placedOrderId = event.orderId
-                is CheckoutEvent.Message -> AppUtil.showToast(context, event.text)
+                is CheckoutEvent.Message -> context.showToast(event.text)
             }
         }
     }

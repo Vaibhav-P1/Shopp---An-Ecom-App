@@ -29,7 +29,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
-import com.example.shopp.AppUtil
+import com.example.shopp.ui.formatDate
 import com.example.shopp.components.ErrorView
 import com.example.shopp.components.LoadingView
 import com.example.shopp.components.statusLabel
@@ -65,7 +65,7 @@ private fun OrderDetailsContent(order: OrderModel, modifier: Modifier = Modifier
         item {
             Text("Order ${order.id}", fontSize = 20.sp, fontWeight = FontWeight.Bold)
             Spacer(Modifier.height(4.dp))
-            Text("Placed on ${AppUtil.formatDate(order.date)}", fontSize = 14.sp)
+            Text("Placed on ${order.date.formatDate()}", fontSize = 14.sp)
             Text(
                 text = statusLabel(order.status),
                 fontSize = 16.sp,

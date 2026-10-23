@@ -40,7 +40,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.example.shopp.AppUtil
+import com.example.shopp.ui.showToast
 import com.example.shopp.R
 import com.example.shopp.components.ErrorView
 import com.example.shopp.components.LoadingView
@@ -63,7 +63,7 @@ fun ProfilePage(
     LaunchedEffect(Unit) {
         viewModel.events.collect { event ->
             when (event) {
-                is ProfileEvent.Message -> AppUtil.showToast(context, event.text)
+                is ProfileEvent.Message -> context.showToast(event.text)
                 ProfileEvent.SignedOut -> onSignedOut()
             }
         }

@@ -38,7 +38,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
-import com.example.shopp.AppUtil
+import com.example.shopp.ui.showToast
 import com.example.shopp.components.ErrorView
 import com.example.shopp.components.LoadingView
 import com.example.shopp.components.rememberAddToCart
@@ -62,7 +62,7 @@ fun ProductDetailsPage(
     val isFavorite by viewModel.isFavorite.collectAsStateWithLifecycle()
 
     LaunchedEffect(viewModel) {
-        viewModel.messages.collect { AppUtil.showToast(context, it) }
+        viewModel.messages.collect { context.showToast(it) }
     }
 
     when (val state = uiState) {

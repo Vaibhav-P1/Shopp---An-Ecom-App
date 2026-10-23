@@ -19,7 +19,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.example.shopp.AppUtil
+import com.example.shopp.ui.showToast
 import com.example.shopp.components.CartItemView
 import com.example.shopp.components.EmptyView
 import com.example.shopp.components.ErrorView
@@ -38,7 +38,7 @@ fun CartPage(
     val context = LocalContext.current
 
     LaunchedEffect(viewModel) {
-        viewModel.messages.collect { AppUtil.showToast(context, it) }
+        viewModel.messages.collect { context.showToast(it) }
     }
 
     Column(
