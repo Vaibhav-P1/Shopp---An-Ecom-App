@@ -23,10 +23,8 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -61,19 +59,19 @@ fun ProductDetailsPage(
     val productId = viewModel.productId
     val addToCart = rememberAddToCart()
 
-    // Favorites still live in SharedPreferences; they move to Firestore in the Wishlist step
-    var isFav by remember { mutableStateOf(AppUtil.checkFavorite(context, productId)) }
+    val isFavorite by viewModel.isFavorite.collectAsStateWithLifecycle()
+
+    LaunchedEffect(viewModel) {
+        viewModel.messages.collect { AppUtil.showToast(context, it) }
+    }
 
     when (val state = uiState) {
         UiState.Loading -> LoadingView(modifier)
         is UiState.Error -> ErrorView(state.message, onRetry = viewModel::retry, modifier = modifier)
         is UiState.Success -> ProductDetailsContent(
             product = state.data,
-            isFavorite = isFav,
-            onToggleFavorite = {
-                AppUtil.addOrRemoveFromFavorite(context, productId)
-                isFav = AppUtil.checkFavorite(context, productId)
-            },
+            isFavorite = isFavorite,
+            onToggleFavorite = viewModel::toggleFavorite,
             onAddToCart = { addToCart(productId) },
             modifier = modifier
         )

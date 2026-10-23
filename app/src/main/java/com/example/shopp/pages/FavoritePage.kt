@@ -12,62 +12,32 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.ui.Alignment
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.shopp.AppUtil
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.shopp.components.EmptyView
+import com.example.shopp.components.ErrorView
+import com.example.shopp.components.LoadingView
 import com.example.shopp.components.ProductItemView
 import com.example.shopp.components.rememberAddToCart
-import com.example.shopp.model.ProductModel
-import com.google.firebase.firestore.ktx.firestore
-import com.google.firebase.ktx.Firebase
+import com.example.shopp.viewmodel.FavoritesViewModel
+import com.example.shopp.viewmodel.UiState
 
 @Composable
-fun FavoritePage(modifier: Modifier = Modifier, onProductClick: (String) -> Unit) {
-    val productList = remember {
-        mutableStateOf<List<ProductModel>>(emptyList())
-    }
-
-    val context = LocalContext.current
+fun FavoritePage(
+    modifier: Modifier = Modifier,
+    onProductClick: (String) -> Unit,
+    viewModel: FavoritesViewModel = hiltViewModel()
+) {
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val addToCart = rememberAddToCart()
 
-    LaunchedEffect(Unit) {
-        val favoriteList = AppUtil.getFavoriteList(context)
-        if(favoriteList.isEmpty()) {
-            productList.value = emptyList()
-        }else {
-            // whereIn allows at most 30 values per query
-            val chunks = favoriteList.toList().chunked(30)
-            var pending = chunks.size
-            val loaded = mutableListOf<ProductModel>()
-            chunks.forEach { ids ->
-                Firebase.firestore
-                    .collection("data")
-                    .document("stock")
-                    .collection("products")
-                    .whereIn("id", ids)
-                    .get()
-                    .addOnCompleteListener {
-                        if (it.isSuccessful) {
-                            loaded.addAll(it.result.documents.mapNotNull { document ->
-                                document.toObject(ProductModel::class.java)
-                            })
-                        }
-                        pending--
-                        if (pending == 0) productList.value = loaded
-                    }
-            }
-        }
-
-    }
     Column(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxSize()
             .statusBarsPadding()
             .padding(16.dp)
@@ -78,38 +48,35 @@ fun FavoritePage(modifier: Modifier = Modifier, onProductClick: (String) -> Unit
             fontWeight = FontWeight.Bold
         )
         Spacer(modifier = Modifier.height(16.dp))
-        if (productList.value.isNotEmpty()) {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize(),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                items(productList.value.chunked(2)) { rowItems ->
-                    Row {
-                        rowItems.forEach {
-                            ProductItemView(
-                                product = it,
-                                onClick = { onProductClick(it.id) },
-                                onAddToCart = { addToCart(it.id) },
-                                modifier = Modifier.weight(1f)
-                            )
-                        }
-                        // If a row has only 1 product, append an empty spacer to maintain layout sizing
-                        if (rowItems.size == 1) {
-                            Spacer(modifier = Modifier.weight(1f))
+
+        when (val state = uiState) {
+            UiState.Loading -> LoadingView()
+            is UiState.Error -> ErrorView(state.message, onRetry = viewModel::retry)
+            is UiState.Success -> if (state.data.isEmpty()) {
+                EmptyView("No items in favorites")
+            } else {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    items(state.data.chunked(2), key = { row -> row.first().id }) { rowItems ->
+                        Row {
+                            rowItems.forEach {
+                                ProductItemView(
+                                    product = it,
+                                    onClick = { onProductClick(it.id) },
+                                    onAddToCart = { addToCart(it.id) },
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
+                            // A row with a single product gets an empty spacer to keep the column width
+                            if (rowItems.size == 1) {
+                                Spacer(modifier = Modifier.weight(1f))
+                            }
                         }
                     }
                 }
             }
-        }else{
-            Column(modifier = Modifier.fillMaxSize(),
-                verticalArrangement = Arrangement.Center,
-                horizontalAlignment = Alignment.CenterHorizontally
-            ){
-                Text(text = "No items in favorites",
-                    fontSize = 30.sp)
-            }
         }
-
     }
 }
