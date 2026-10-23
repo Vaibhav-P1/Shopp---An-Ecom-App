@@ -33,50 +33,6 @@ object AppUtil {
             ?.toMap()
             .orEmpty()
 
-    fun addItemToCart(productId: String, context: Context) {
-        val currentUserId = FirebaseAuth.getInstance().currentUser?.uid
-        if (currentUserId == null) {
-            showToast(context, "Please sign in first")
-            return
-        }
-        val userDoc = Firebase.firestore.collection("users").document(currentUserId)
-
-        // increment is atomic, so rapid taps can't overwrite each other
-        userDoc.update("cartItems.$productId", FieldValue.increment(1))
-            .addOnCompleteListener {
-                if (it.isSuccessful) {
-                    showToast(context, "Item added to the cart")
-                } else {
-                    showToast(context, "Failed adding item to the cart")
-                }
-            }
-    }
-
-    fun removeFromCart(productId: String, context: Context, removeAll: Boolean = false) {
-        val currentUserId = FirebaseAuth.getInstance().currentUser?.uid
-        if (currentUserId == null) {
-            showToast(context, "Please sign in first")
-            return
-        }
-        val userDoc = Firebase.firestore.collection("users").document(currentUserId)
-
-        Firebase.firestore.runTransaction { transaction ->
-            val currentCart = parseCart(transaction.get(userDoc).get("cartItems"))
-            val updatedQuantity = (currentCart[productId] ?: 0L) - 1
-
-            if (updatedQuantity <= 0 || removeAll)
-                transaction.update(userDoc, "cartItems.$productId", FieldValue.delete())
-            else
-                transaction.update(userDoc, "cartItems.$productId", updatedQuantity)
-        }.addOnCompleteListener {
-            if (it.isSuccessful) {
-                showToast(context, "Item removed from the cart")
-            } else {
-                showToast(context, "Failed removing item from the cart")
-            }
-        }
-    }
-
     fun clearCartAndAddToOrders() {
         val currentUserId = FirebaseAuth.getInstance().currentUser?.uid ?: return
         val userDoc = Firebase.firestore.collection("users").document(currentUserId)

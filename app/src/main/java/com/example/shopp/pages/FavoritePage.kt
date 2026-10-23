@@ -23,6 +23,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.shopp.AppUtil
 import com.example.shopp.components.ProductItemView
+import com.example.shopp.components.rememberAddToCart
 import com.example.shopp.model.ProductModel
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
@@ -34,6 +35,7 @@ fun FavoritePage(modifier: Modifier = Modifier, onProductClick: (String) -> Unit
     }
 
     val context = LocalContext.current
+    val addToCart = rememberAddToCart()
 
     LaunchedEffect(Unit) {
         val favoriteList = AppUtil.getFavoriteList(context)
@@ -88,7 +90,7 @@ fun FavoritePage(modifier: Modifier = Modifier, onProductClick: (String) -> Unit
                             ProductItemView(
                                 product = it,
                                 onClick = { onProductClick(it.id) },
-                                onAddToCart = { AppUtil.addItemToCart(it.id, context) },
+                                onAddToCart = { addToCart(it.id) },
                                 modifier = Modifier.weight(1f)
                             )
                         }

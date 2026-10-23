@@ -17,53 +17,31 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
-import com.example.shopp.AppUtil
-import com.example.shopp.GlobalNavigation
-import com.example.shopp.model.ProductModel
-import com.google.firebase.firestore.ktx.firestore
-import com.google.firebase.ktx.Firebase
+import com.example.shopp.viewmodel.CartLine
 
 @Composable
-fun CartItemView(modifier: Modifier = Modifier, productId: String, qty: Long) {
-    var product by remember { mutableStateOf(ProductModel()) }
-    val context = LocalContext.current
+fun CartItemView(
+    line: CartLine,
+    onClick: () -> Unit,
+    onIncrement: () -> Unit,
+    onDecrement: () -> Unit,
+    onRemove: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val product = line.product
 
-    LaunchedEffect(Unit) {
-        Firebase.firestore
-            .collection("data")
-            .document("stock")
-            .collection("products")
-            .document(productId)
-            .get()
-            .addOnCompleteListener {
-                if (it.isSuccessful) {
-                    val result = it.result.toObject(ProductModel::class.java)
-                    if (result != null) {
-                        product = result
-                    }
-                }
-            }
-    }
     Card(
         modifier = modifier
             .padding(8.dp)
             .fillMaxWidth()
-            .clickable {
-                GlobalNavigation.navController.navigate("product-details/"+product.id)
-            },
+            .clickable(enabled = product != null, onClick = onClick),
         shape = RoundedCornerShape(12.dp),
         elevation = CardDefaults.cardElevation(8.dp),
         colors = CardDefaults.cardColors(
@@ -75,8 +53,8 @@ fun CartItemView(modifier: Modifier = Modifier, productId: String, qty: Long) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             AsyncImage(
-                model = product.images.firstOrNull(),
-                contentDescription = product.title,
+                model = product?.images?.firstOrNull(),
+                contentDescription = product?.title,
                 modifier = Modifier
                     .height(100.dp)
                     .width(100.dp)
@@ -87,53 +65,47 @@ fun CartItemView(modifier: Modifier = Modifier, productId: String, qty: Long) {
                     .weight(1f)
             ) {
                 Text(
-                    text = product.title,
+                    text = product?.title ?: "Product no longer available",
                     fontWeight = FontWeight.Bold,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.padding(bottom = 8.dp)
                 )
-                // Actual discounted price
-                Text(
-                    text = "₹${product.actualPrice}",
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.SemiBold
-                )
+                if (product != null) {
+                    // Actual discounted price
+                    Text(
+                        text = "₹${product.actualPrice}",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
 
                 // Quantity Select Stepper Component Block
                 Row(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    IconButton(onClick = {
-                        AppUtil.removeFromCart(productId, context)
-                    }) {
+                    IconButton(onClick = onDecrement) {
                         Text(text = "−", fontSize = 20.sp, fontWeight = FontWeight.Bold)
                     }
 
                     Text(
-                        text = qty.toString(),
+                        text = line.quantity.toString(),
                         fontSize = 16.sp,
                         modifier = Modifier.padding(horizontal = 8.dp)
                     )
 
-                    IconButton(onClick = {
-                        AppUtil.addItemToCart(productId, context)
-                    }) {
+                    IconButton(onClick = onIncrement, enabled = product != null) {
                         Text(text = "+", fontSize = 20.sp, fontWeight = FontWeight.Bold)
                     }
                 }
             }
 
-            IconButton(onClick = {
-                AppUtil.removeFromCart(context = context, productId = productId, removeAll = true)
-            }) {
+            IconButton(onClick = onRemove) {
                 Icon(
                     imageVector = Icons.Default.Delete,
-                    contentDescription = "Add to cart"
+                    contentDescription = "Remove from cart"
                 )
             }
-
         }
     }
-
 }

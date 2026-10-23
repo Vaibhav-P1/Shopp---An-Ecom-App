@@ -43,6 +43,7 @@ import coil.compose.AsyncImage
 import com.example.shopp.AppUtil
 import com.example.shopp.components.ErrorView
 import com.example.shopp.components.LoadingView
+import com.example.shopp.components.rememberAddToCart
 import com.example.shopp.model.ProductModel
 import com.example.shopp.viewmodel.ProductDetailsViewModel
 import com.example.shopp.viewmodel.UiState
@@ -58,6 +59,7 @@ fun ProductDetailsPage(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val productId = viewModel.productId
+    val addToCart = rememberAddToCart()
 
     // Favorites still live in SharedPreferences; they move to Firestore in the Wishlist step
     var isFav by remember { mutableStateOf(AppUtil.checkFavorite(context, productId)) }
@@ -72,7 +74,7 @@ fun ProductDetailsPage(
                 AppUtil.addOrRemoveFromFavorite(context, productId)
                 isFav = AppUtil.checkFavorite(context, productId)
             },
-            onAddToCart = { AppUtil.addItemToCart(productId = productId, context = context) },
+            onAddToCart = { addToCart(productId) },
             modifier = modifier
         )
     }

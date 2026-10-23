@@ -9,15 +9,14 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.example.shopp.AppUtil
 import com.example.shopp.components.EmptyView
 import com.example.shopp.components.ErrorView
 import com.example.shopp.components.LoadingView
 import com.example.shopp.components.ProductItemView
+import com.example.shopp.components.rememberAddToCart
 import com.example.shopp.viewmodel.CategoryProductsViewModel
 import com.example.shopp.viewmodel.UiState
 
@@ -28,7 +27,7 @@ fun CategoryProductsPage(
     viewModel: CategoryProductsViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val context = LocalContext.current
+    val addToCart = rememberAddToCart()
 
     when (val state = uiState) {
         UiState.Loading -> LoadingView(modifier)
@@ -47,7 +46,7 @@ fun CategoryProductsPage(
                     ProductItemView(
                         product = product,
                         onClick = { onProductClick(product.id) },
-                        onAddToCart = { AppUtil.addItemToCart(product.id, context) }
+                        onAddToCart = { addToCart(product.id) }
                     )
                 }
             }

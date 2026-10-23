@@ -3,6 +3,7 @@ package com.example.shopp.data
 import com.example.shopp.model.ProductModel
 import com.google.firebase.firestore.CollectionReference
 import com.google.firebase.firestore.DocumentSnapshot
+import com.google.firebase.firestore.FieldPath
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
@@ -25,6 +26,15 @@ class ProductRepository @Inject constructor(
     suspend fun getProduct(productId: String): Result<ProductModel> = firestoreCall {
         products.document(productId).get().await().toProduct()
             ?: throw NoSuchElementException("This product is no longer available")
+    }
+
+    /** Firestore allows at most 30 values per `whereIn`, so ids are fetched in chunks. */
+    suspend fun getProductsByIds(ids: Collection<String>): Result<List<ProductModel>> = firestoreCall {
+        ids.distinct().chunked(30).flatMap { chunk ->
+            products.whereIn(FieldPath.documentId(), chunk).get().await()
+                .documents
+                .mapNotNull { it.toProduct() }
+        }
     }
 
     private fun DocumentSnapshot.toProduct(): ProductModel? =
