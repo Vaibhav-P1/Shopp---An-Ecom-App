@@ -44,7 +44,7 @@ fun AuthScreen(modifier: Modifier = Modifier, navController: NavHostController) 
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val authViewModel: AuthViewModel = viewModel()
-    val webClientId = "605943827235-4e7mfr5n29ho44cs3lvldrj9octfusoh.apps.googleusercontent.com"
+    val webClientId = context.getString(R.string.default_web_client_id)
     var isLoading by remember { mutableStateOf(false) }
 
     Column(

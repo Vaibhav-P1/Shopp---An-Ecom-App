@@ -8,7 +8,6 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -43,7 +42,6 @@ fun BannerView(modifier: Modifier = Modifier) {
     }
 
 //    AsynImage for loading image from url
-//    AsyncImage(model = if(bannerList.size>0) bannerList.get(0) else "", contentDescription = "banner")
 
     Column(
         modifier = modifier

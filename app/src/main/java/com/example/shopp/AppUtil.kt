@@ -116,7 +116,7 @@ object AppUtil {
     }
 
     fun razorpayApiKey() : String{
-        return "rzp_test_SuqQDOg4Ffsnbk"
+        return BuildConfig.RAZORPAY_KEY
     }
 
     fun startPayment(amount: Float) {

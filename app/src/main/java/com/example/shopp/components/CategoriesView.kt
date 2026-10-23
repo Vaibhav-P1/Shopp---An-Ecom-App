@@ -27,7 +27,6 @@ import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.example.shopp.GlobalNavigation
 import com.example.shopp.model.CategoryModel
-import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
 
@@ -50,7 +49,6 @@ fun CategoriesView(modifier: Modifier = Modifier){
                 }
             }
     }
-//    Text(text=categoryList.value.toString())
     LazyRow(
         horizontalArrangement = Arrangement.spacedBy(20.dp)
     ) {

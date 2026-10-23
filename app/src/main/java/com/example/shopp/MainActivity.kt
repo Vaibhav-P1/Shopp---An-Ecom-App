@@ -8,10 +8,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import com.example.shopp.ui.theme.ShoppTheme
 import com.razorpay.PaymentResultListener
@@ -49,7 +46,6 @@ class MainActivity : ComponentActivity(), PaymentResultListener {
         }
         .setCancelable(false)
             .show()
-//        val confirmationDialog = builder.create()
 //        confirmationDialog.show()
 
     }

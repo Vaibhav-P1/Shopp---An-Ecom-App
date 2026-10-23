@@ -26,7 +26,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.shopp.AppUtil
-import com.example.shopp.GlobalNavigation
 import com.example.shopp.model.ProductModel
 import com.example.shopp.model.UserModel
 import com.google.firebase.auth.FirebaseAuth
