@@ -32,15 +32,15 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
-import com.example.shopp.AppUtil
 import com.example.shopp.R
 import com.example.shopp.viewmodel.AuthViewModel
 
 
 @Composable
-fun LoginScreen(modifier: Modifier = Modifier,navController : NavController, authViewModel : AuthViewModel = viewModel()){
+fun LoginScreen(modifier: Modifier = Modifier,navController : NavController, authViewModel: AuthViewModel = hiltViewModel()){
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var context = LocalContext.current
@@ -48,7 +48,9 @@ fun LoginScreen(modifier: Modifier = Modifier,navController : NavController, aut
     val scope = rememberCoroutineScope()
     val webClientId = context.getString(R.string.default_web_client_id)
 
-    var isLoading by remember { mutableStateOf(false) }
+    val uiState by authViewModel.uiState.collectAsStateWithLifecycle()
+    val isLoading = uiState.isLoading
+    AuthEventsEffect(authViewModel, navController)
 
     Column(
         modifier = modifier.fillMaxSize().padding(32.dp),
@@ -108,20 +110,7 @@ fun LoginScreen(modifier: Modifier = Modifier,navController : NavController, aut
 
         Spacer(modifier = Modifier.height(20.dp))
 
-        Button(onClick = {
-            isLoading = true
-            authViewModel.login(email, password){success,errorMessage->
-                if(success){
-                    isLoading = false
-                    navController.navigate("home"){
-                        popUpTo("auth"){ inclusive = true }
-                    }
-                }else{
-                    isLoading = false
-                    AppUtil.showToast(context = context, errorMessage?:"Something went wrong")
-                }
-            }
-        },
+        Button(onClick = { authViewModel.login(email, password) },
             enabled = !isLoading,
             modifier = Modifier.fillMaxWidth()
                 .height(60.dp)
@@ -134,20 +123,8 @@ fun LoginScreen(modifier: Modifier = Modifier,navController : NavController, aut
         Spacer(modifier = Modifier.height(12.dp))
 
         OutlinedButton(
-            onClick = {
-                isLoading = true
-                authViewModel.googleSignIn(context, scope, webClientId) { success, error ->
-                    isLoading = false
-                    if (success) {
-                        navController.navigate("home") {
-                            popUpTo("auth") { inclusive = true }
-                        }
-                    } else {
-                        AppUtil.showToast(context, error ?: "Google Sign-In failed")
-                    }
-                }
-            },
-            modifier = Modifier.fillMaxWidth(),
+            onClick = { authViewModel.googleSignIn(context, scope, webClientId) },
+                        modifier = Modifier.fillMaxWidth(),
             enabled = !isLoading
         ) {
             Icon(

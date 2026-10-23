@@ -26,21 +26,23 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
-import com.example.shopp.AppUtil
 import com.example.shopp.R
 import com.example.shopp.viewmodel.AuthViewModel
 
 @Composable
-fun SignupScreen(modifier: Modifier = Modifier, navController: NavController, authViewModel: AuthViewModel = viewModel()) {
+fun SignupScreen(modifier: Modifier = Modifier, navController: NavController, authViewModel: AuthViewModel = hiltViewModel()) {
 
     var email by remember { mutableStateOf("") }
     var name by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var context = LocalContext.current
 
-    var isLoading by remember { mutableStateOf(false) }
+    val uiState by authViewModel.uiState.collectAsStateWithLifecycle()
+    val isLoading = uiState.isLoading
+    AuthEventsEffect(authViewModel, navController)
 
 
 
@@ -115,20 +117,7 @@ fun SignupScreen(modifier: Modifier = Modifier, navController: NavController, au
 
         Spacer(modifier = Modifier.height(20.dp))
 
-        Button(onClick = {
-            isLoading = true
-            authViewModel.signup(email, name, password){success,errorMessage->
-                if(success){
-                    isLoading = false
-                    navController.navigate("home"){
-                        popUpTo("auth"){ inclusive = true }
-                    }
-                }else{
-                    isLoading = false
-                    AppUtil.showToast(context = context, errorMessage?:"Something went wrong")
-                }
-            }
-        },
+        Button(onClick = { authViewModel.signup(email, name, password) },
             enabled = !isLoading,
             modifier = Modifier.fillMaxWidth()
                 .height(60.dp)

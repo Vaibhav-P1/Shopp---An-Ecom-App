@@ -1,135 +1,79 @@
 package com.example.shopp.viewmodel
 
-import android.content.Context
-import androidx.credentials.CredentialManager
-import androidx.credentials.GetCredentialRequest
-import androidx.credentials.exceptions.GetCredentialException
+import android.util.Patterns
 import androidx.lifecycle.ViewModel
-import com.example.shopp.model.UserModel
-import com.google.android.libraries.identity.googleid.GetGoogleIdOption
-import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
-import com.google.firebase.Firebase
-import com.google.firebase.auth.GoogleAuthProvider
-import com.google.firebase.auth.auth
-import com.google.firebase.firestore.firestore
-import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.CoroutineScope
+import androidx.lifecycle.viewModelScope
+import com.example.shopp.data.AuthRepository
+import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
-class AuthViewModel: ViewModel() {
+data class AuthUiState(val isLoading: Boolean = false)
 
-    private val auth = Firebase.auth
+sealed interface AuthEvent {
+    data object Authenticated : AuthEvent
+    data class Failure(val message: String) : AuthEvent
+}
 
-    private val firestore = Firebase.firestore
+@HiltViewModel
+class AuthViewModel @Inject constructor(
+    private val repository: AuthRepository
+) : ViewModel() {
 
-    fun login(email: String, password: String, onResult: (Boolean,String?)-> Unit){
-        auth.signInWithEmailAndPassword(email, password)
-            .addOnCompleteListener {
-                if(it.isSuccessful) {
-                    onResult(true, null)
-                }else{
-                    onResult(false, it.exception?.localizedMessage)
-                }
-            }
+    private val _uiState = MutableStateFlow(AuthUiState())
+    val uiState: StateFlow<AuthUiState> = _uiState.asStateFlow()
+
+    private val _events = Channel<AuthEvent>(Channel.BUFFERED)
+    val events = _events.receiveAsFlow()
+
+    val isLoggedIn: Boolean get() = repository.isLoggedIn
+
+    fun login(email: String, password: String) {
+        val trimmed = email.trim()
+        validateCredentials(trimmed, password)?.let { return fail(it) }
+        submit { repository.login(trimmed, password) }
     }
 
-    fun signup(email: String, name: String, password: String, onResult: (Boolean,String?)-> Unit){
-        auth.createUserWithEmailAndPassword(email, password)
-            .addOnCompleteListener {
-                if(it.isSuccessful) {
-                    val userId = it.result?.user?.uid
-                    if (userId == null) {
-                        onResult(false, "Signup failed, please try again")
-                        return@addOnCompleteListener
-                    }
-
-                    val userModel = UserModel(name, email, userId)
-                    firestore.collection("users").document(userId).set(userModel)
-                        .addOnCompleteListener { dbTask ->
-                            if(dbTask.isSuccessful){
-                                onResult(true, null)
-                            }else{
-                                onResult(false,"Something went wrong")
-                            }
-                        }
-                }else{
-                    onResult(false, it.exception?.localizedMessage)
-                }
-            }
-
-
+    fun signup(email: String, name: String, password: String) {
+        val trimmed = email.trim()
+        if (name.isBlank()) return fail("Please enter your name")
+        validateCredentials(trimmed, password)?.let { return fail(it) }
+        submit { repository.signup(trimmed, name.trim(), password) }
     }
 
-    fun googleSignIn(
-        context: Context,
-        scope: CoroutineScope,
-        webClientId: String,
-        onResult: (Boolean, String?) -> Unit
-    ) {
-        val credentialManager = CredentialManager.create(context)
+    fun signInWithGoogle(idToken: String) = submit { repository.signInWithGoogle(idToken) }
 
-        val googleIdOption = GetGoogleIdOption.Builder()
-            .setFilterByAuthorizedAccounts(false) // show all accounts, not just previously signed-in
-            .setServerClientId(webClientId)
-            .build()
+    fun onGoogleFailure(message: String?) = fail(message ?: "Google Sign-In failed")
 
-        val request = GetCredentialRequest.Builder()
-            .addCredentialOption(googleIdOption)
-            .build()
+    fun onGoogleStarted() {
+        _uiState.value = AuthUiState(isLoading = true)
+    }
 
-        scope.launch {
-            try {
-                val result = credentialManager.getCredential(context, request)
-                val credential = result.credential
-                val googleIdTokenCredential = GoogleIdTokenCredential.createFrom(credential.data)
-                val idToken = googleIdTokenCredential.idToken
+    private fun validateCredentials(email: String, password: String): String? = when {
+        !Patterns.EMAIL_ADDRESS.matcher(email).matches() -> "Please enter a valid email"
+        password.length < 6 -> "Password must be at least 6 characters"
+        else -> null
+    }
 
-                val firebaseCredential = GoogleAuthProvider.getCredential(idToken, null)
+    private fun fail(message: String) {
+        _uiState.value = AuthUiState(isLoading = false)
+        _events.trySend(AuthEvent.Failure(message))
+    }
 
-                auth.signInWithCredential(firebaseCredential)
-                    .addOnCompleteListener { task ->
-                        if (task.isSuccessful) {
-                            val user = task.result?.user
-                            val userId = user?.uid
-                            if (userId == null) {
-                                onResult(false, "Sign in failed, please try again")
-                                return@addOnCompleteListener
-                            }
-
-                            // Check if user doc exists; if not, create it (new Google user)
-                            firestore.collection("users").document(userId).get()
-                                .addOnCompleteListener { docTask ->
-                                    if (!docTask.isSuccessful) {
-                                        onResult(false, docTask.exception?.localizedMessage)
-                                        return@addOnCompleteListener
-                                    }
-                                    if (docTask.result.exists()) {
-                                        onResult(true, null)
-                                        return@addOnCompleteListener
-                                    }
-                                    val userModel = UserModel(
-                                        name = user.displayName ?: "",
-                                        email = user.email ?: "",
-                                        uid = userId
-                                    )
-                                    firestore.collection("users").document(userId)
-                                        .set(userModel)
-                                        .addOnCompleteListener { setTask ->
-                                            onResult(setTask.isSuccessful, setTask.exception?.localizedMessage)
-                                        }
-                                }
-                        } else {
-                            onResult(false, task.exception?.localizedMessage)
-                        }
-                    }
-
-            } catch (e: GetCredentialException) {
-                onResult(false, e.localizedMessage)
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                onResult(false, e.localizedMessage)
-            }
+    private fun submit(block: suspend () -> Result<Unit>) {
+        _uiState.value = AuthUiState(isLoading = true)
+        viewModelScope.launch {
+            block()
+                .onSuccess {
+                    _uiState.value = AuthUiState(isLoading = false)
+                    _events.send(AuthEvent.Authenticated)
+                }
+                .onFailure { fail(it.localizedMessage ?: "Something went wrong") }
         }
     }
 }

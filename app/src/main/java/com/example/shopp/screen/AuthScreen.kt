@@ -16,8 +16,6 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -31,9 +29,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
-import com.example.shopp.AppUtil
 import com.example.shopp.R
 import com.example.shopp.viewmodel.AuthViewModel
 
@@ -43,9 +41,11 @@ fun AuthScreen(modifier: Modifier = Modifier, navController: NavHostController) 
 
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    val authViewModel: AuthViewModel = viewModel()
+    val authViewModel: AuthViewModel = hiltViewModel()
     val webClientId = context.getString(R.string.default_web_client_id)
-    var isLoading by remember { mutableStateOf(false) }
+    val uiState by authViewModel.uiState.collectAsStateWithLifecycle()
+    val isLoading = uiState.isLoading
+    AuthEventsEffect(authViewModel, navController)
 
     Column(
         modifier = modifier.fillMaxSize().padding(32.dp),
@@ -101,20 +101,8 @@ fun AuthScreen(modifier: Modifier = Modifier, navController: NavHostController) 
         Spacer(modifier = Modifier.height(12.dp))
 
         OutlinedButton(
-            onClick = {
-                isLoading = true
-                authViewModel.googleSignIn(context, scope, webClientId) { success, error ->
-                    isLoading = false
-                    if (success) {
-                        navController.navigate("home") {
-                            popUpTo("auth") { inclusive = true }
-                        }
-                    } else {
-                        AppUtil.showToast(context, error ?: "Google Sign-In failed")
-                    }
-                }
-            },
-            modifier = Modifier.fillMaxWidth(),
+            onClick = { authViewModel.googleSignIn(context, scope, webClientId) },
+                        modifier = Modifier.fillMaxWidth(),
             enabled = !isLoading
         ) {
             Icon(
