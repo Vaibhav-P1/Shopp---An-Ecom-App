@@ -261,9 +261,10 @@ fun ProfilePage(modifier: Modifier = Modifier) {
                 onClick = {
                     FirebaseAuth.getInstance().signOut()
                     val navController = GlobalNavigation.navController
-                    // Clear active backstack metrics history parameters cleanly on logout tasks execution
-                    navController.popBackStack()
-                    navController.navigate("auth") // Maps redirect target back onto application initialization views
+                    // Clear the whole back stack so Back can't return into the signed-out app
+                    navController.navigate("auth") {
+                        popUpTo(0) { inclusive = true }
+                    }
                 },
                 modifier = Modifier
                     .fillMaxWidth()

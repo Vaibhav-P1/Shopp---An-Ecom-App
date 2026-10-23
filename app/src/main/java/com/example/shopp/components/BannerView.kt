@@ -35,9 +35,10 @@ fun BannerView(modifier: Modifier = Modifier) {
     LaunchedEffect(Unit)  {
         Firebase.firestore.collection("data")
             .document("banners")
-            .get().addOnCompleteListener() {
-                bannerList = it.result.get("urls") as List<String>
-
+            .get().addOnSuccessListener { document ->
+                bannerList = (document.get("urls") as? List<*>)
+                    ?.filterIsInstance<String>()
+                    .orEmpty()
             }
     }
 

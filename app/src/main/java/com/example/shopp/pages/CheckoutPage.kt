@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material3.Button
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -43,44 +44,53 @@ fun CheckoutPage(modifier: Modifier = Modifier) {
     var total = remember { mutableStateOf(0f) }
 
     fun calculateAssign() {
+        // Start from zero every time so repeated calls never double count
         var runningSubtotal = 0f
         productList.forEach { product ->
-            if (product.actualPrice.isNotEmpty()) {
-                val qty = userModel.value.cartItems[product.id] ?: 0L
-                subTotal.value += product.actualPrice.toFloat() * qty
-            }
+            val price = product.actualPrice.toFloatOrNull() ?: return@forEach
+            val qty = userModel.value.cartItems[product.id] ?: 0L
+            runningSubtotal += price * qty
         }
-        discount.value = subTotal.value * (AppUtil.getDiscountPercentage() / 100f)
-        tax.value = subTotal.value * (AppUtil.getTaxPercentage() / 100f)
+        subTotal.value = runningSubtotal
+        discount.value = runningSubtotal * (AppUtil.getDiscountPercentage() / 100f)
+        tax.value = runningSubtotal * (AppUtil.getTaxPercentage() / 100f)
 
-        total.value = subTotal.value - discount.value + tax.value
-        // Formats down precisely to two decimal value targets
-//        total = String.format("%.2f", total).toFloat()
+        total.value = runningSubtotal - discount.value + tax.value
     }
 
     LaunchedEffect(Unit) {
+        val userId = FirebaseAuth.getInstance().currentUser?.uid ?: return@LaunchedEffect
         Firebase.firestore
             .collection("users")
-            .document(FirebaseAuth.getInstance().currentUser?.uid!!)
+            .document(userId)
             .get().addOnCompleteListener {
                 if (it.isSuccessful) {
                     val result = it.result.toObject(UserModel::class.java)
                     if (result != null) {
                         userModel.value = result
 
-                        Firebase.firestore
-                            .collection("data")
-                            .document("stock")
-                            .collection("products")
-                            .whereIn("id", userModel.value.cartItems.keys.toList())
-                            .get().addOnCompleteListener { task ->
-                                if (task.isSuccessful) {
-                                    val resultProducts =
-                                        task.result.toObjects(ProductModel::class.java)
-                                    productList.addAll(resultProducts)
-                                    calculateAssign()
+                        // whereIn rejects an empty list and allows at most 30 values
+                        val chunks = result.cartItems.keys.toList().chunked(30)
+                        var pending = chunks.size
+                        val loaded = mutableListOf<ProductModel>()
+                        chunks.forEach { ids ->
+                            Firebase.firestore
+                                .collection("data")
+                                .document("stock")
+                                .collection("products")
+                                .whereIn("id", ids)
+                                .get().addOnCompleteListener { task ->
+                                    if (task.isSuccessful) {
+                                        loaded.addAll(task.result.toObjects(ProductModel::class.java))
+                                    }
+                                    pending--
+                                    if (pending == 0) {
+                                        productList.clear()
+                                        productList.addAll(loaded)
+                                        calculateAssign()
+                                    }
                                 }
-                            }
+                        }
                     }
                 }
             }
@@ -108,11 +118,11 @@ fun CheckoutPage(modifier: Modifier = Modifier) {
         Spacer(modifier = Modifier.height(16.dp))
 
         // Billing Rows Breakdown
-        RowCheckoutItems(title = "Subtotal", value = "₹"+subTotal.value.toString())
+        RowCheckoutItems(title = "Subtotal", value = "₹" + "%.2f".format(subTotal.value))
         Spacer(modifier = Modifier.height(8.dp))
-        RowCheckoutItems(title = "Discount", value = "-₹"+discount.value.toString())
+        RowCheckoutItems(title = "Discount", value = "-₹" + "%.2f".format(discount.value))
         Spacer(modifier = Modifier.height(8.dp))
-        RowCheckoutItems(title = "Tax", value = "+₹"+tax.value.toString())
+        RowCheckoutItems(title = "Tax", value = "+₹" + "%.2f".format(tax.value))
 //
         Spacer(modifier = Modifier.height(16.dp))
         HorizontalDivider()
@@ -126,7 +136,7 @@ fun CheckoutPage(modifier: Modifier = Modifier) {
             fontSize = 16.sp
         )
         Text(
-            text = "₹"+total.value.toString(),
+            text = "₹" + "%.2f".format(total.value),
             modifier = Modifier.fillMaxWidth(),
             textAlign = TextAlign.Center,
             fontSize = 30.sp,
@@ -135,10 +145,21 @@ fun CheckoutPage(modifier: Modifier = Modifier) {
 
         Spacer(modifier = Modifier.height(16.dp))
 
+        if (userModel.value.address.isBlank()) {
+            Text(
+                text = "Add a delivery address in your profile to place an order",
+                color = MaterialTheme.colorScheme.error,
+                modifier = Modifier.fillMaxWidth(),
+                textAlign = TextAlign.Center
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+        }
+
         Button(
             onClick = {
                     AppUtil.startPayment(total.value)
             },
+            enabled = total.value > 0f && userModel.value.address.isNotBlank(),
             modifier = Modifier
                 .fillMaxWidth()
                 .height(50.dp)

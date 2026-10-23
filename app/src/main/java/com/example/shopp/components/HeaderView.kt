@@ -32,10 +32,11 @@ fun HeaderView(modifier: Modifier = Modifier){
     }
 
     LaunchedEffect(Unit) {
+        val userId = FirebaseAuth.getInstance().currentUser?.uid ?: return@LaunchedEffect
         Firebase.firestore.collection("users")
-            .document(FirebaseAuth.getInstance().currentUser?.uid!!)
-            .get().addOnCompleteListener() {
-                name = it.result.get("name").toString().split(" ").get(0)
+            .document(userId)
+            .get().addOnSuccessListener { document ->
+                name = document.getString("name").orEmpty().split(" ").firstOrNull().orEmpty()
             }
     }
 

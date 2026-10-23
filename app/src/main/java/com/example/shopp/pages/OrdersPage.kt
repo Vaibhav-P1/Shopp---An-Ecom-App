@@ -30,15 +30,16 @@ fun OrdersPage(modifier: Modifier = Modifier){
     val orderList = remember { mutableStateOf<List<OrderModel>>(emptyList()) }
 
     LaunchedEffect(Unit) {
+        val userId = FirebaseAuth.getInstance().currentUser?.uid ?: return@LaunchedEffect
         Firebase.firestore
             .collection("orders")
-            .whereEqualTo("userId", FirebaseAuth.getInstance().currentUser?.uid!!)
+            .whereEqualTo("userId", userId)
             .get()
             .addOnCompleteListener {
                 if (it.isSuccessful) {
                     val resultList = it.result.documents.mapNotNull { document ->
                         document.toObject(OrderModel::class.java)
-                    }
+                    }.sortedByDescending { order -> order.date }
                     orderList.value = resultList
 //                        .plus(resultList).plus(resultList)  it allows to show more data
                 }

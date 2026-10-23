@@ -40,21 +40,27 @@ fun FavoritePage(modifier: Modifier = Modifier) {
         if(favoriteList.isEmpty()) {
             productList.value = emptyList()
         }else {
-            Firebase.firestore
-                .collection("data")
-                .document("stock")
-                .collection("products")
-                .whereIn("id", favoriteList.toList())
-                .get()
-                .addOnCompleteListener {
-                    if (it.isSuccessful) {
-                        val resultList = it.result.documents.mapNotNull { document ->
-                            document.toObject(ProductModel::class.java)
+            // whereIn allows at most 30 values per query
+            val chunks = favoriteList.toList().chunked(30)
+            var pending = chunks.size
+            val loaded = mutableListOf<ProductModel>()
+            chunks.forEach { ids ->
+                Firebase.firestore
+                    .collection("data")
+                    .document("stock")
+                    .collection("products")
+                    .whereIn("id", ids)
+                    .get()
+                    .addOnCompleteListener {
+                        if (it.isSuccessful) {
+                            loaded.addAll(it.result.documents.mapNotNull { document ->
+                                document.toObject(ProductModel::class.java)
+                            })
                         }
-                        productList.value = resultList
-//                        .plus(resultList).plus(resultList)  it allows to show more data
+                        pending--
+                        if (pending == 0) productList.value = loaded
                     }
-                }
+            }
         }
 
     }

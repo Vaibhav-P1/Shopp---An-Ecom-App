@@ -2,7 +2,6 @@ package com.example.shopp
 
 import android.app.AlertDialog
 import android.os.Bundle
-import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -13,11 +12,13 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import com.example.shopp.ui.theme.ShoppTheme
 import com.razorpay.PaymentResultListener
 
 class MainActivity : ComponentActivity(), PaymentResultListener {
     override fun onCreate(savedInstanceState: Bundle?) {
+        installSplashScreen() // must run before super.onCreate
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
@@ -41,9 +42,10 @@ class MainActivity : ComponentActivity(), PaymentResultListener {
 
         .setPositiveButton("OK") { _ , _ ->
             val navController = GlobalNavigation.navController
-            // Wipe backstack tracking traces entirely to protect checkout loops
-            navController.popBackStack()
-            navController.navigate("home")
+            // Wipe the back stack so Back can't return to checkout
+            navController.navigate("home") {
+                popUpTo(0) { inclusive = true }
+            }
         }
         .setCancelable(false)
             .show()

@@ -12,6 +12,7 @@ import com.google.firebase.Firebase
 import com.google.firebase.auth.GoogleAuthProvider
 import com.google.firebase.auth.auth
 import com.google.firebase.firestore.firestore
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
@@ -36,9 +37,13 @@ class AuthViewModel: ViewModel() {
         auth.createUserWithEmailAndPassword(email, password)
             .addOnCompleteListener {
                 if(it.isSuccessful) {
-                    var userId = it.result?.user?.uid
+                    val userId = it.result?.user?.uid
+                    if (userId == null) {
+                        onResult(false, "Signup failed, please try again")
+                        return@addOnCompleteListener
+                    }
 
-                    val userModel = UserModel(name, email, userId!!)
+                    val userModel = UserModel(name, email, userId)
                     firestore.collection("users").document(userId).set(userModel)
                         .addOnCompleteListener { dbTask ->
                             if(dbTask.isSuccessful){
@@ -85,21 +90,33 @@ class AuthViewModel: ViewModel() {
                     .addOnCompleteListener { task ->
                         if (task.isSuccessful) {
                             val user = task.result?.user
-                            val userId = user?.uid ?: return@addOnCompleteListener
+                            val userId = user?.uid
+                            if (userId == null) {
+                                onResult(false, "Sign in failed, please try again")
+                                return@addOnCompleteListener
+                            }
 
                             // Check if user doc exists; if not, create it (new Google user)
                             firestore.collection("users").document(userId).get()
                                 .addOnCompleteListener { docTask ->
-                                    if (docTask.isSuccessful && !docTask.result.exists()) {
-                                        val userModel = UserModel(
-                                            name = user.displayName ?: "",
-                                            email = user.email ?: "",
-                                            uid = userId
-                                        )
-                                        firestore.collection("users").document(userId)
-                                            .set(userModel)
+                                    if (!docTask.isSuccessful) {
+                                        onResult(false, docTask.exception?.localizedMessage)
+                                        return@addOnCompleteListener
                                     }
-                                    onResult(true, null)
+                                    if (docTask.result.exists()) {
+                                        onResult(true, null)
+                                        return@addOnCompleteListener
+                                    }
+                                    val userModel = UserModel(
+                                        name = user.displayName ?: "",
+                                        email = user.email ?: "",
+                                        uid = userId
+                                    )
+                                    firestore.collection("users").document(userId)
+                                        .set(userModel)
+                                        .addOnCompleteListener { setTask ->
+                                            onResult(setTask.isSuccessful, setTask.exception?.localizedMessage)
+                                        }
                                 }
                         } else {
                             onResult(false, task.exception?.localizedMessage)
@@ -107,6 +124,10 @@ class AuthViewModel: ViewModel() {
                     }
 
             } catch (e: GetCredentialException) {
+                onResult(false, e.localizedMessage)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
                 onResult(false, e.localizedMessage)
             }
         }

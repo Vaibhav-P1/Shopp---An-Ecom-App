@@ -22,111 +22,87 @@ object AppUtil {
         Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
     }
 
-    fun addItemToCart(productId: String, context: Context) {
-        val currentUserId = FirebaseAuth.getInstance().currentUser?.uid!!
-        val userDoc =
-            Firebase.firestore            //Taking document reference because we want to update it
-                .collection("users")
-                .document(currentUserId)
-
-        userDoc.get().addOnCompleteListener {
-            if (it.isSuccessful) {
-                // Fetch the existing map of cart items or initialize an empty one
-                val currentCart = it.result.get("cartItems") as? Map<String, Long> ?: emptyMap()
-
-                // Read current product quantity or fallback to 0
-                val currentQuantity = currentCart[productId] ?: 0L
-                val updatedQuantity = currentQuantity + 1
-
-                // Create map variable targeting structural nested values updates
-                val updatedCart = mapOf(
-                    "cartItems.$productId" to updatedQuantity
-                )
-
-                // Update the document in Firestore
-                userDoc.update(updatedCart)
-                    .addOnCompleteListener {
-                        if (it.isSuccessful) {
-                            showToast(context, "Item added to the cart")
-                        } else {
-                            showToast(context, "Failed adding item to the cart")
-                        }
-                    }
+    // Firestore returns cart quantities as Long, but never trust the raw cast
+    private fun parseCart(raw: Any?): Map<String, Long> =
+        (raw as? Map<*, *>)
+            ?.mapNotNull { (key, value) ->
+                val productId = key as? String ?: return@mapNotNull null
+                val qty = (value as? Number)?.toLong() ?: return@mapNotNull null
+                productId to qty
             }
+            ?.toMap()
+            .orEmpty()
 
+    fun addItemToCart(productId: String, context: Context) {
+        val currentUserId = FirebaseAuth.getInstance().currentUser?.uid
+        if (currentUserId == null) {
+            showToast(context, "Please sign in first")
+            return
         }
+        val userDoc = Firebase.firestore.collection("users").document(currentUserId)
+
+        // increment is atomic, so rapid taps can't overwrite each other
+        userDoc.update("cartItems.$productId", FieldValue.increment(1))
+            .addOnCompleteListener {
+                if (it.isSuccessful) {
+                    showToast(context, "Item added to the cart")
+                } else {
+                    showToast(context, "Failed adding item to the cart")
+                }
+            }
     }
 
-    fun removeFromCart(productId: String, context: Context,removeAll : Boolean = false) {
-        val currentUserId = FirebaseAuth.getInstance().currentUser?.uid!!
-        val userDoc =
-            Firebase.firestore            //Taking document reference because we want to update it
-                .collection("users")
-                .document(currentUserId)
-
-        userDoc.get().addOnCompleteListener {
-            if (it.isSuccessful) {
-                // Fetch the existing map of cart items or initialize an empty one
-                val currentCart = it.result.get("cartItems") as? Map<String, Long> ?: emptyMap()
-
-                // Read current product quantity or fallback to 0
-                val currentQuantity = currentCart[productId] ?: 0L
-                val updatedQuantity = currentQuantity - 1
-
-
-                // Create map variable targeting structural nested values updates
-                val updatedCart =
-                    if (updatedQuantity <=0 || removeAll)
-                        mapOf("cartItems.$productId" to FieldValue.delete())
-                    else
-                        mapOf("cartItems.$productId" to updatedQuantity)
-
-                // Update the document in Firestore
-                userDoc.update(updatedCart)
-                    .addOnCompleteListener {
-                        if (it.isSuccessful) {
-                            showToast(context, "Item removed from the cart")
-                        } else {
-                            showToast(context, "Failed removing item from the cart")
-                        }
-                    }
-            }
-
+    fun removeFromCart(productId: String, context: Context, removeAll: Boolean = false) {
+        val currentUserId = FirebaseAuth.getInstance().currentUser?.uid
+        if (currentUserId == null) {
+            showToast(context, "Please sign in first")
+            return
         }
+        val userDoc = Firebase.firestore.collection("users").document(currentUserId)
 
+        Firebase.firestore.runTransaction { transaction ->
+            val currentCart = parseCart(transaction.get(userDoc).get("cartItems"))
+            val updatedQuantity = (currentCart[productId] ?: 0L) - 1
+
+            if (updatedQuantity <= 0 || removeAll)
+                transaction.update(userDoc, "cartItems.$productId", FieldValue.delete())
+            else
+                transaction.update(userDoc, "cartItems.$productId", updatedQuantity)
+        }.addOnCompleteListener {
+            if (it.isSuccessful) {
+                showToast(context, "Item removed from the cart")
+            } else {
+                showToast(context, "Failed removing item from the cart")
+            }
+        }
     }
 
     fun clearCartAndAddToOrders() {
-        val currentUserId = FirebaseAuth.getInstance().currentUser?.uid!!
-        val userDoc =
-            Firebase.firestore            //Taking document reference because we want to update it
-                .collection("users")
-                .document(currentUserId)
+        val currentUserId = FirebaseAuth.getInstance().currentUser?.uid ?: return
+        val userDoc = Firebase.firestore.collection("users").document(currentUserId)
 
         userDoc.get().addOnCompleteListener {
             if (it.isSuccessful) {
-                // Fetch the existing map of cart items or initialize an empty one
-                val currentCart = it.result.get("cartItems") as? Map<String, Long> ?: emptyMap()
+                val currentCart = parseCart(it.result.get("cartItems"))
+                if (currentCart.isEmpty()) return@addOnCompleteListener
 
                 val order = OrderModel(
-                    id ="ORD_"+ UUID.randomUUID().toString().replace("-","").take(10).uppercase(),
+                    id = "ORD_" + UUID.randomUUID().toString().replace("-", "").take(10).uppercase(),
                     userId = currentUserId,
                     date = Timestamp.now(),
                     items = currentCart,
                     status = "ORDERED",
-                    address = it.result.get("address") as String
+                    address = it.result.getString("address").orEmpty()
                 )
                 Firebase.firestore
                     .collection("orders")
                     .document(order.id)
                     .set(order)
-                    .addOnCompleteListener {
-                        if(it.isSuccessful){
-                            userDoc.update("cartItems",FieldValue.delete())
+                    .addOnCompleteListener { orderTask ->
+                        if (orderTask.isSuccessful) {
+                            userDoc.update("cartItems", FieldValue.delete())
                         }
                     }
-
-
             }
         }
     }
@@ -152,14 +128,14 @@ object AppUtil {
             options.put("name", "Shopp")
             options.put("description", "E-commerce Order Payment Transaction")
 
-            // Critical transformation: Gateway accepts amounts exclusively in base subunits (cents/paise)
-            val calculatedSubunitAmount = (amount * 100).toInt()
+            // Gateway accepts amounts in the smallest unit (paise); round, don't truncate
+            val calculatedSubunitAmount = Math.round(amount * 100)
             options.put("amount", calculatedSubunitAmount)
 
-            options.put("currency", "INR") // Swap to "INR" for alternative banking portals
+            options.put("currency", "INR")
 
-            // Resolve context bounds tracking back safely into target instances
-            val currentActivityContext = GlobalNavigation.navController.context as Activity
+            val currentActivityContext = GlobalNavigation.navController.context as? Activity
+                ?: return
             checkout.open(currentActivityContext, options)
 
         } catch (e: Exception) {

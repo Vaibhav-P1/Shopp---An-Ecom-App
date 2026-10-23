@@ -35,20 +35,22 @@ fun CartPage(modifier: Modifier = Modifier) {
     var userModel = remember { mutableStateOf(UserModel()) }
 
     DisposableEffect(Unit)   {
-        val currentUserId = FirebaseAuth.getInstance().currentUser?.uid!!
-        var listener = Firebase.firestore
-            .collection("users")
-            .document(currentUserId)
-            .addSnapshotListener {it,_ ->      //to see changes frequently
-                if (it!=null) {
-                    val result = it.toObject(UserModel::class.java)
-                    if (result != null) {
-                        userModel.value = result
+        val currentUserId = FirebaseAuth.getInstance().currentUser?.uid
+        val listener = currentUserId?.let { uid ->
+            Firebase.firestore
+                .collection("users")
+                .document(uid)
+                .addSnapshotListener { it, _ ->      //to see changes frequently
+                    if (it != null) {
+                        val result = it.toObject(UserModel::class.java)
+                        if (result != null) {
+                            userModel.value = result
+                        }
                     }
                 }
-            }
+        }
         onDispose {
-            listener.remove()
+            listener?.remove()
         }
     }
 
