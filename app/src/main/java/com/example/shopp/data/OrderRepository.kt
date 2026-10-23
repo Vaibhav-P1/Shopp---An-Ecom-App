@@ -9,6 +9,9 @@ import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -84,6 +87,36 @@ class OrderRepository @Inject constructor(
             }.await()
             Unit
         }
+
+    /** Live list of the signed-in user's orders, newest first. Fails the flow if the listener errors. */
+    fun observeOrders(): Flow<List<OrderModel>> = callbackFlow {
+        val uid = auth.currentUser?.uid
+        if (uid == null) {
+            trySend(emptyList())
+            awaitClose { }
+            return@callbackFlow
+        }
+        val registration = firestore.collection("orders")
+            .whereEqualTo("userId", uid)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    close(error)
+                    return@addSnapshotListener
+                }
+                val orders = snapshot?.documents
+                    ?.mapNotNull { it.toObject(OrderModel::class.java) }
+                    ?.sortedByDescending { it.date }
+                    .orEmpty()
+                trySend(orders)
+            }
+        awaitClose { registration.remove() }
+    }
+
+    suspend fun getOrder(orderId: String): Result<OrderModel> = firestoreCall {
+        firestore.collection("orders").document(orderId).get().await()
+            .toObject(OrderModel::class.java)
+            ?: throw IllegalStateException("Order not found")
+    }
 
     private fun parseQuantities(raw: Any?): Map<String, Long> =
         (raw as? Map<*, *>)

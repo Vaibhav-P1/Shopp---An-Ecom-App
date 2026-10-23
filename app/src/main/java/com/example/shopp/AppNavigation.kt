@@ -8,6 +8,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.shopp.pages.CategoryProductsPage
 import com.example.shopp.pages.CheckoutPage
+import com.example.shopp.pages.OrderDetailsPage
 import com.example.shopp.pages.OrdersPage
 import com.example.shopp.pages.ProductDetailsPage
 import com.example.shopp.screen.AuthScreen
@@ -67,7 +68,14 @@ fun AppNavigation(modifier: Modifier){
         }
 
         composable("orders"){
-            OrdersPage(modifier)
+            OrdersPage(
+                modifier = modifier,
+                onOrderClick = { orderId -> navController.navigate("order-details/$orderId") }
+            )
+        }
+
+        composable("order-details/{orderId}"){
+            OrderDetailsPage(modifier)
         }
 
         composable("seller"){

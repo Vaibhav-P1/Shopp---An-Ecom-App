@@ -12,7 +12,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -21,11 +20,11 @@ import com.example.shopp.domain.Money
 import com.example.shopp.model.OrderModel
 
 @Composable
-fun OrderView(orderItem: OrderModel, modifier: Modifier = Modifier) {
+fun OrderView(orderItem: OrderModel, onClick: () -> Unit, modifier: Modifier = Modifier) {
     Card(
-        modifier = Modifier
+        onClick = onClick,
+        modifier = modifier
             .fillMaxWidth()
-
             .padding(8.dp),
         shape = RoundedCornerShape(12.dp),
         elevation = CardDefaults.cardElevation(8.dp),
@@ -50,18 +49,17 @@ fun OrderView(orderItem: OrderModel, modifier: Modifier = Modifier) {
 
             Spacer(modifier = Modifier.height(4.dp))
 
-            // Displays real-time order progression status tags with an orange hex tint highlight
             Text(
-                text = "Status: ${orderItem.status}",
+                text = statusLabel(orderItem.status),
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Bold,
-                color = Color(0xFFE65100) // Hex equivalent representation for dark orange
+                color = MaterialTheme.colorScheme.primary
             )
 
             Spacer(modifier = Modifier.height(4.dp))
 
             Text(
-                text = "Items: ${orderItem.items.size} Product(s)",
+                text = "Items: ${orderItem.items.values.sum()}",
                 fontSize = 14.sp,
                 fontWeight = FontWeight.SemiBold
             )
@@ -76,4 +74,10 @@ fun OrderView(orderItem: OrderModel, modifier: Modifier = Modifier) {
 
         }
     }
+}
+
+/** User-facing name for a stored order status. */
+fun statusLabel(status: String): String = when (status) {
+    "ORDERED" -> "Placed"
+    else -> status.lowercase().replaceFirstChar { it.uppercase() }
 }

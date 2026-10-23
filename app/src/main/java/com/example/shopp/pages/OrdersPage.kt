@@ -11,41 +11,30 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.shopp.components.EmptyView
+import com.example.shopp.components.ErrorView
+import com.example.shopp.components.LoadingView
 import com.example.shopp.components.OrderView
-import com.example.shopp.model.OrderModel
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.ktx.firestore
-import com.google.firebase.ktx.Firebase
+import com.example.shopp.viewmodel.OrdersViewModel
+import com.example.shopp.viewmodel.UiState
 
 @Composable
-fun OrdersPage(modifier: Modifier = Modifier){
-    val orderList = remember { mutableStateOf<List<OrderModel>>(emptyList()) }
+fun OrdersPage(
+    modifier: Modifier = Modifier,
+    onOrderClick: (String) -> Unit,
+    viewModel: OrdersViewModel = hiltViewModel()
+) {
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-    LaunchedEffect(Unit) {
-        val userId = FirebaseAuth.getInstance().currentUser?.uid ?: return@LaunchedEffect
-        Firebase.firestore
-            .collection("orders")
-            .whereEqualTo("userId", userId)
-            .get()
-            .addOnCompleteListener {
-                if (it.isSuccessful) {
-                    val resultList = it.result.documents.mapNotNull { document ->
-                        document.toObject(OrderModel::class.java)
-                    }.sortedByDescending { order -> order.date }
-                    orderList.value = resultList
-//                        .plus(resultList).plus(resultList)  it allows to show more data
-                }
-            }
-    }
     Column(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxSize()
             .padding(16.dp)
             .statusBarsPadding()
@@ -58,14 +47,20 @@ fun OrdersPage(modifier: Modifier = Modifier){
 
         Spacer(modifier = Modifier.height(16.dp))
 
-
-
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            items(orderList.value) { item ->
-                OrderView(orderItem = item)
+        when (val state = uiState) {
+            UiState.Loading -> LoadingView()
+            is UiState.Error -> ErrorView(state.message, onRetry = viewModel::retry)
+            is UiState.Success -> if (state.data.isEmpty()) {
+                EmptyView("You haven't placed any orders yet")
+            } else {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    items(state.data, key = { it.id }) { order ->
+                        OrderView(orderItem = order, onClick = { onOrderClick(order.id) })
+                    }
+                }
             }
         }
     }
