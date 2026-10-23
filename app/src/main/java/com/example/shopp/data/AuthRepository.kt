@@ -32,7 +32,13 @@ class AuthRepository @Inject constructor(
     suspend fun signInWithGoogle(idToken: String): Result<Unit> = runCatchingAuth {
         val user = auth.signInWithCredential(GoogleAuthProvider.getCredential(idToken, null)).await().user
             ?: error("Sign in failed, please try again")
-        createUserDocIfMissing(user)
+        try {
+            createUserDocIfMissing(user)
+        } catch (e: Exception) {
+            // Don't leave a signed-in session behind when the profile can't be read or created
+            auth.signOut()
+            throw e
+        }
     }
 
     private suspend fun createUserDocIfMissing(user: FirebaseUser) {

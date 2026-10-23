@@ -1,0 +1,33 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    // Each user can read and write only their own profile, cart and address.
+    match /users/{uid} {
+      allow read, write: if signedIn() && request.auth.uid == uid;
+    }
+
+    // Catalogue (products, categories, banners) is read-only for signed-in users.
+    match /data/{document=**} {
+      allow read: if signedIn();
+      allow write: if false;
+    }
+
+    match /offers/{offerId} {
+      allow read: if signedIn();
+      allow write: if false;
+    }
+
+    // Orders: owners create and read their own orders; they are never edited from the client.
+    match /orders/{orderId} {
+      allow read: if signedIn() && resource.data.userId == request.auth.uid;
+      allow create: if signedIn() && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if false;
+    }
+  }
+}
