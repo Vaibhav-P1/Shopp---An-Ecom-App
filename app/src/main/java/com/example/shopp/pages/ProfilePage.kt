@@ -1,7 +1,6 @@
 package com.example.shopp.pages
 
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -17,8 +16,6 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material3.Button
-import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
@@ -29,7 +26,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -44,6 +40,9 @@ import com.example.shopp.ui.showToast
 import com.example.shopp.R
 import com.example.shopp.components.ErrorView
 import com.example.shopp.components.LoadingView
+import com.example.shopp.components.PrimaryButton
+import com.example.shopp.components.ShoppCard
+import com.example.shopp.ui.theme.Spacing
 import com.example.shopp.viewmodel.ProfileData
 import com.example.shopp.viewmodel.ProfileEvent
 import com.example.shopp.viewmodel.ProfileViewModel
@@ -160,10 +159,9 @@ private fun ProfileContent(
 
         Spacer(modifier = Modifier.height(20.dp))
 
-        ElevatedCard(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable(onClick = onOrdersClick)
+        ShoppCard(
+            onClick = onOrdersClick,
+            modifier = Modifier.fillMaxWidth()
         ) {
             Row(
                 modifier = Modifier
@@ -182,10 +180,9 @@ private fun ProfileContent(
 
         Spacer(modifier = Modifier.height(32.dp))
 
-        ElevatedCard(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable(onClick = onSellerClick)
+        ShoppCard(
+            onClick = onSellerClick,
+            modifier = Modifier.fillMaxWidth()
         ) {
             Row(
                 modifier = Modifier
@@ -202,13 +199,8 @@ private fun ProfileContent(
             }
         }
 
-        Button(
-            onClick = onSignOut,
-            modifier = Modifier
-                .fillMaxWidth()
-                .align(Alignment.CenterHorizontally)
-        ) {
-            Text(text = "Sign Out", fontSize = 18.sp)
-        }
+        Spacer(modifier = Modifier.height(Spacing.lg))
+
+        PrimaryButton(text = "Sign Out", onClick = onSignOut)
     }
 }

@@ -9,31 +9,26 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
-import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.shopp.R
+import com.example.shopp.components.PrimaryButton
+import com.example.shopp.components.SecondaryButton
+import com.example.shopp.ui.theme.Spacing
 import com.example.shopp.viewmodel.AuthViewModel
-
 
 @Composable
 fun AuthScreen(
@@ -52,7 +47,7 @@ fun AuthScreen(
     AuthEventsEffect(authViewModel, onAuthenticated)
 
     Column(
-        modifier = modifier.fillMaxSize().padding(32.dp),
+        modifier = modifier.fillMaxSize().padding(Spacing.xxl),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -62,64 +57,58 @@ fun AuthScreen(
             modifier = Modifier.fillMaxWidth().height(300.dp)
         )
 
-        Spacer(modifier = Modifier.height(20.dp))
+        Spacer(modifier = Modifier.height(Spacing.xl))
 
-        Text(text = "Start your shopping journey now",
-            style = TextStyle(
-                fontSize = 30.sp,
-                fontFamily = FontFamily.Monospace,
-                fontWeight = FontWeight.SemiBold,
-                textAlign = TextAlign.Center
-            )
+        Text(
+            text = "Start your shopping journey now",
+            style = MaterialTheme.typography.headlineSmall,
+            textAlign = TextAlign.Center
         )
-        Spacer(modifier = Modifier.height(20.dp))
+
+        Spacer(modifier = Modifier.height(Spacing.sm))
 
         Text(
             text = "Best ecom platform with best prices",
-            style = TextStyle(
-                textAlign = TextAlign.Center
-            )
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center
         )
 
-        Spacer(modifier = Modifier.height(20.dp))
+        Spacer(modifier = Modifier.height(Spacing.xl))
 
-        Button(onClick = { onLoginClick() },
-            modifier = Modifier.fillMaxWidth()
-                .height(60.dp)
-        ) {
-            Text(text = "Login", fontSize = 22.sp)
-        }
+        PrimaryButton(text = "Login", onClick = onLoginClick)
 
-        Spacer(modifier = Modifier.height(20.dp))
+        Spacer(modifier = Modifier.height(Spacing.md))
 
-        OutlinedButton(onClick = { onSignupClick() },
-            modifier = Modifier.fillMaxWidth()
-                .height(60.dp)
-        ) {
-            Text(text = "Signup", fontSize = 22.sp)
-        }
-        Spacer(modifier = Modifier.height(12.dp))
+        SecondaryButton(text = "Signup", onClick = onSignupClick)
 
-        Text("or", modifier = Modifier.align(Alignment.CenterHorizontally))
+        Spacer(modifier = Modifier.height(Spacing.md))
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Text("or", color = MaterialTheme.colorScheme.onSurfaceVariant)
 
-        OutlinedButton(
+        Spacer(modifier = Modifier.height(Spacing.md))
+
+        GoogleButton(
             onClick = { authViewModel.googleSignIn(context, scope, webClientId) },
-                        modifier = Modifier.fillMaxWidth(),
             enabled = !isLoading
-        ) {
+        )
+    }
+}
+
+@Composable
+fun GoogleButton(onClick: () -> Unit, enabled: Boolean, modifier: Modifier = Modifier) {
+    SecondaryButton(
+        text = "Continue with Google",
+        onClick = onClick,
+        enabled = enabled,
+        modifier = modifier,
+        leadingContent = {
             Icon(
-                painter = painterResource(id = R.drawable.ic_google), // add google icon to drawable
-                contentDescription = "Google",
+                painter = painterResource(id = R.drawable.ic_google),
+                contentDescription = null,
                 modifier = Modifier.size(20.dp),
                 tint = Color.Unspecified
             )
-
-            Spacer(modifier = Modifier.width(8.dp))
-            Text("Continue with Google")
         }
-
-
-    }
+    )
 }

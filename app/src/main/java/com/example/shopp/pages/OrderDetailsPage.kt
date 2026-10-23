@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Card
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -32,6 +31,7 @@ import coil.compose.AsyncImage
 import com.example.shopp.ui.formatDate
 import com.example.shopp.components.ErrorView
 import com.example.shopp.components.LoadingView
+import com.example.shopp.components.ShoppCard
 import com.example.shopp.components.statusLabel
 import com.example.shopp.domain.Money
 import com.example.shopp.model.OrderLineModel
@@ -86,7 +86,7 @@ private fun OrderDetailsContent(order: OrderModel, modifier: Modifier = Modifier
         }
 
         item {
-            Card(shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth()) {
+            ShoppCard(modifier = Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     if (order.totalPaise > 0) {
                         AmountRow("Subtotal", Money.format(order.subtotalPaise))
