@@ -188,7 +188,7 @@ private fun ProfileContent(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    text = "Create Seller Account",
+                    text = if ("seller" in data.user.roles) "Seller Dashboard" else "Become a Seller",
                     modifier = Modifier.fillMaxWidth(),
                     textAlign = TextAlign.Center,
                     fontWeight = FontWeight.SemiBold

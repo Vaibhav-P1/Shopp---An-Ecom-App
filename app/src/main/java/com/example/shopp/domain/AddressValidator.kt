@@ -25,11 +25,13 @@ object AddressValidator {
     ): AddressErrors = AddressErrors(
         label = if (label.isBlank()) "Give this address a name, e.g. Home" else null,
         recipient = if (recipient.isBlank()) "Enter the recipient name" else null,
-        phone = if (PHONE.matches(phone.trim())) null else "Enter a 10-digit mobile number",
+        phone = if (isValidPhone(phone)) null else "Enter a 10-digit mobile number",
         street = if (street.trim().length >= 5) null else "Enter house number and street",
         city = if (city.isBlank()) "Enter the city" else null,
         pincode = if (PINCODE.matches(pincode.trim())) null else "Enter a 6-digit pincode"
     )
+
+    fun isValidPhone(phone: String): Boolean = PHONE.matches(phone.trim())
 
     // Indian mobile numbers start with 6-9; PIN codes are six digits and never start with 0
     private val PHONE = Regex("[6-9]\\d{9}")

@@ -7,9 +7,26 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    // True if the signed-in user holds the "seller" role on their profile.
+    function isSeller() {
+      return signedIn()
+        && 'seller' in get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('roles', []);
+    }
+
+    // The profile may only gain the seller role together with a `sellers/{uid}` document written in the same
+    // batch; otherwise the roles stay exactly as they were.
+    function rolesUnchangedOrSellerOnboarding(uid) {
+      let before = resource == null ? ['customer'] : resource.data.get('roles', ['customer']);
+      let after = request.resource.data.get('roles', ['customer']);
+      return after == before
+        || (after.hasOnly(['customer', 'seller']) && 'seller' in after
+            && existsAfter(/databases/$(database)/documents/sellers/$(uid)));
+    }
+
     // Each user can read and write only their own profile, cart and address.
     match /users/{uid} {
-      allow read, write: if signedIn() && request.auth.uid == uid;
+      allow read, delete: if signedIn() && request.auth.uid == uid;
+      allow create, update: if signedIn() && request.auth.uid == uid && rolesUnchangedOrSellerOnboarding(uid);
 
       // Saved delivery addresses: owner only, with a fixed shape so malformed documents are rejected.
       match /addresses/{addressId} {
@@ -25,6 +42,18 @@ service cloud.firestore {
           && request.resource.data.pincode is string && request.resource.data.pincode.matches('[1-9][0-9]{5}')
           && request.resource.data.primary is bool;
       }
+    }
+
+    // Seller profiles: owner only. Anyone signed in may create their own (self-service onboarding).
+    match /sellers/{uid} {
+      allow read: if signedIn() && request.auth.uid == uid;
+      allow create, update: if signedIn() && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['shopName', 'phone', 'status', 'createdAt'])
+        && request.resource.data.shopName is string && request.resource.data.shopName.size() >= 2
+        && request.resource.data.shopName.size() <= 40
+        && request.resource.data.phone is string && request.resource.data.phone.matches('[6-9][0-9]{9}')
+        && request.resource.data.status == 'approved';
+      allow delete: if false;
     }
 
     // Catalogue (products, categories, banners) is read-only for signed-in users.

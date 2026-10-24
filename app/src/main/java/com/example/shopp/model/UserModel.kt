@@ -5,5 +5,6 @@ data class UserModel(
     val email: String = "",
     val uid: String = "",
     val cartItems: Map<String, Long> = emptyMap(), // Key: Product ID, Value: Quantity
-    val address: String = "" // Added for delivery processing
+    val address: String = "", // Legacy single address; the address book replaced it
+    val roles: List<String> = listOf("customer")
 )
