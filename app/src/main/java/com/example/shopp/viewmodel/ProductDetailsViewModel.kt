@@ -38,6 +38,11 @@ class ProductDetailsViewModel @Inject constructor(
         .catch { emit(false) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
 
+    private val _similar = MutableStateFlow<List<ProductModel>>(emptyList())
+
+    /** Other products from the same category, shown under the details. */
+    val similar: StateFlow<List<ProductModel>> = _similar.asStateFlow()
+
     private val _messages = Channel<String>(Channel.BUFFERED)
     val messages = _messages.receiveAsFlow()
 
@@ -68,6 +73,16 @@ class ProductDetailsViewModel @Inject constructor(
                 onSuccess = { UiState.Success(it) },
                 onFailure = { UiState.Error(it.localizedMessage ?: "Something went wrong") }
             )
+            (_uiState.value as? UiState.Success)?.data?.let { product ->
+                // Suggestions are a bonus: if the catalogue cannot be loaded the section is simply hidden
+                _similar.value = repository.getAllProducts().getOrDefault(emptyList())
+                    .filter { it.category == product.category && it.id != product.id }
+                    .take(SIMILAR_LIMIT)
+            }
         }
+    }
+
+    private companion object {
+        const val SIMILAR_LIMIT = 8
     }
 }

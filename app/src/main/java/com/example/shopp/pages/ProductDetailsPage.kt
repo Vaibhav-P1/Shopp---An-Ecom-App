@@ -1,5 +1,8 @@
 package com.example.shopp.pages
 
+import android.content.Context
+import android.content.Intent
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -8,6 +11,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
@@ -16,7 +21,9 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Button
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -39,7 +46,9 @@ import coil.compose.AsyncImage
 import com.example.shopp.ui.showToast
 import com.example.shopp.components.ErrorView
 import com.example.shopp.components.LoadingView
+import com.example.shopp.components.ProductItemView
 import com.example.shopp.components.RatingSummaryLine
+import com.example.shopp.domain.discountPercent
 import com.example.shopp.components.ReviewsSection
 import com.example.shopp.components.rememberAddToCart
 import com.example.shopp.model.ProductModel
@@ -54,6 +63,7 @@ import com.tbuonomo.viewpagerdotsindicator.compose.type.ShiftIndicatorType
 @Composable
 fun ProductDetailsPage(
     modifier: Modifier = Modifier,
+    onProductClick: (String) -> Unit,
     reviewsViewModel: ProductReviewsViewModel = hiltViewModel(),
     viewModel: ProductDetailsViewModel = hiltViewModel()
 ) {
@@ -63,6 +73,7 @@ fun ProductDetailsPage(
     val addToCart = rememberAddToCart()
 
     val isFavorite by viewModel.isFavorite.collectAsStateWithLifecycle()
+    val similar by viewModel.similar.collectAsStateWithLifecycle()
 
     val reviews by reviewsViewModel.uiState.collectAsStateWithLifecycle()
     val isSavingReview by reviewsViewModel.isSaving.collectAsStateWithLifecycle()
@@ -82,6 +93,9 @@ fun ProductDetailsPage(
             isFavorite = isFavorite,
             onToggleFavorite = viewModel::toggleFavorite,
             onAddToCart = { addToCart(productId) },
+            similar = similar,
+            onProductClick = onProductClick,
+            onAddSimilarToCart = addToCart,
             reviews = reviews,
             isSavingReview = isSavingReview,
             onSubmitReview = reviewsViewModel::submit,
@@ -91,12 +105,23 @@ fun ProductDetailsPage(
     }
 }
 
+private fun shareProduct(context: Context, product: ProductModel) {
+    val intent = Intent(Intent.ACTION_SEND).apply {
+        type = "text/plain"
+        putExtra(Intent.EXTRA_TEXT, "${product.title} for ₹${product.actualPrice} on Shopp")
+    }
+    context.startActivity(Intent.createChooser(intent, "Share product"))
+}
+
 @Composable
 private fun ProductDetailsContent(
     product: ProductModel,
     isFavorite: Boolean,
     onToggleFavorite: () -> Unit,
     onAddToCart: () -> Unit,
+    similar: List<ProductModel>,
+    onProductClick: (String) -> Unit,
+    onAddSimilarToCart: (String) -> Unit,
     reviews: ReviewsUiState,
     isSavingReview: Boolean,
     onSubmitReview: (Int, String) -> Unit,
@@ -169,7 +194,24 @@ private fun ProductDetailsContent(
                 fontWeight = FontWeight.Bold
             )
 
+            product.discountPercent?.let { percent ->
+                Spacer(modifier = Modifier.width(8.dp))
+                Surface(shape = MaterialTheme.shapes.small, color = MaterialTheme.colorScheme.secondaryContainer) {
+                    Text(
+                        text = "$percent% OFF",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                    )
+                }
+            }
+
             Spacer(modifier = Modifier.weight(1f))
+
+            val context = LocalContext.current
+            IconButton(onClick = { shareProduct(context, product) }) {
+                Icon(imageVector = Icons.Default.Share, contentDescription = "Share ${product.title}")
+            }
 
             IconButton(onClick = onToggleFavorite) {
                 Icon(
@@ -236,6 +278,21 @@ private fun ProductDetailsContent(
                     Text(
                         text = value,
                         fontSize = 16.sp
+                    )
+                }
+            }
+        }
+
+        if (similar.isNotEmpty()) {
+            Spacer(modifier = Modifier.height(24.dp))
+            Text(text = "You may also like", fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                items(similar, key = { it.id }) { other ->
+                    ProductItemView(
+                        product = other,
+                        onClick = { onProductClick(other.id) },
+                        onAddToCart = { onAddSimilarToCart(other.id) },
+                        modifier = Modifier.width(190.dp)
                     )
                 }
             }

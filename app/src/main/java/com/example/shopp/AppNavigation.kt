@@ -83,7 +83,10 @@ fun AppNavigation(isLoggedIn: Boolean) {
         }
 
         composable<ProductDetails> {
-            ProductDetailsPage(insets)
+            ProductDetailsPage(
+                modifier = insets,
+                onProductClick = { productId -> navController.navigate(ProductDetails(productId)) }
+            )
         }
 
         composable<Checkout> {
