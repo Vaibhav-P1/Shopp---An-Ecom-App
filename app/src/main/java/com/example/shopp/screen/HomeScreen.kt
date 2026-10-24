@@ -1,11 +1,18 @@
 package com.example.shopp.screen
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.ShoppingCart
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.MaterialTheme
@@ -20,10 +27,14 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.shopp.pages.CartPage
 import com.example.shopp.pages.FavoritePage
 import com.example.shopp.pages.HomePage
 import com.example.shopp.pages.ProfilePage
+import com.example.shopp.viewmodel.CartViewModel
+import com.example.shopp.viewmodel.UiState
 
 @Composable
 fun HomeScreen(
@@ -39,7 +50,7 @@ fun HomeScreen(
     val navItemList = listOf(
         NavItem("Home", Icons.Default.Home),
         NavItem("Favorite", Icons.Default.Favorite),
-        NavItem("Cart", Icons.Default.ShoppingCart),
+        NavItem("Cart", Icons.Default.ShoppingCart, showsCartCount = true),
         NavItem("Profile", Icons.Default.Person)
     )
 
@@ -48,6 +59,10 @@ fun HomeScreen(
     }
 
 
+
+    val cartViewModel: CartViewModel = hiltViewModel()
+    val cartState by cartViewModel.uiState.collectAsStateWithLifecycle()
+    val cartCount = (cartState as? UiState.Success)?.data?.sumOf { it.quantity.toInt() } ?: 0
 
     Scaffold(
         bottomBar = {
@@ -61,7 +76,11 @@ fun HomeScreen(
                             selectedIconColor = MaterialTheme.colorScheme.onPrimaryContainer
                         ),
                         icon = {
-                            Icon(imageVector = navItem.icon, contentDescription = navItem.label)
+                            if (navItem.showsCartCount) {
+                                CartIcon(navItem, cartCount)
+                            } else {
+                                Icon(imageVector = navItem.icon, contentDescription = navItem.label)
+                            }
                         },
                         label = {
                             Text(text = navItem.label)
@@ -71,16 +90,18 @@ fun HomeScreen(
             }
         }
     ) {
-        ContentScreen(
-            modifier = Modifier.padding(it),
-            selectedIndex = selectedIndex,
-            onCategoryClick = onCategoryClick,
-            onProductClick = onProductClick,
-            onCheckout = onCheckout,
-            onOrdersClick = onOrdersClick,
-            onSellerClick = onSellerClick,
-            onSignedOut = onSignedOut
-        )
+        Crossfade(targetState = selectedIndex, label = "tabs") { tab ->
+            ContentScreen(
+                modifier = Modifier.padding(it),
+                selectedIndex = tab,
+                onCategoryClick = onCategoryClick,
+                onProductClick = onProductClick,
+                onCheckout = onCheckout,
+                onOrdersClick = onOrdersClick,
+                onSellerClick = onSellerClick,
+                onSignedOut = onSignedOut
+            )
+        }
     }
 }
 
@@ -110,7 +131,29 @@ fun ContentScreen(
 
 data class NavItem(
     val label : String,
-    val icon : ImageVector
+    val icon : ImageVector,
+    val showsCartCount: Boolean = false
 )
+
+/** Cart tab icon with a badge that pops in and animates when the item count changes. */
+@Composable
+private fun CartIcon(navItem: NavItem, count: Int) {
+    BadgedBox(
+        badge = {
+            AnimatedVisibility(visible = count > 0, enter = scaleIn(), exit = scaleOut()) {
+                Badge(containerColor = MaterialTheme.colorScheme.secondary) {
+                    AnimatedContent(targetState = count, label = "cartCount") { value ->
+                        Text(text = if (value > 99) "99+" else value.toString())
+                    }
+                }
+            }
+        }
+    ) {
+        Icon(
+            imageVector = navItem.icon,
+            contentDescription = if (count > 0) "${navItem.label}, $count items" else navItem.label
+        )
+    }
+}
 
 

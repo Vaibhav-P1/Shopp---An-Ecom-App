@@ -9,7 +9,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ShoppingCart
-import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -26,6 +25,7 @@ import com.example.shopp.components.CartItemView
 import com.example.shopp.components.EmptyView
 import com.example.shopp.components.ErrorView
 import com.example.shopp.components.ListSkeleton
+import com.example.shopp.components.PrimaryButton
 import com.example.shopp.viewmodel.CartViewModel
 import com.example.shopp.viewmodel.UiState
 
@@ -71,14 +71,7 @@ fun CartPage(
                         )
                     }
                 }
-                Button(
-                    onClick = onCheckout,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(50.dp)
-                ) {
-                    Text(text = "Checkout", fontSize = 16.sp)
-                }
+                PrimaryButton(text = "Checkout", onClick = onCheckout)
             }
         }
     }
