@@ -12,10 +12,17 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -29,6 +36,10 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import com.example.shopp.ui.formatDate
 import com.example.shopp.components.ErrorView
+import com.example.shopp.components.OrderTimeline
+import com.example.shopp.components.SecondaryButton
+import com.example.shopp.ui.showToast
+import com.example.shopp.model.OrderStatus
 import com.example.shopp.components.LoadingView
 import com.example.shopp.components.ShoppCard
 import com.example.shopp.components.statusLabel
@@ -44,16 +55,48 @@ fun OrderDetailsPage(
     viewModel: OrderDetailsViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val isCancelling by viewModel.isCancelling.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+
+    LaunchedEffect(viewModel) {
+        viewModel.messages.collect { context.showToast(it) }
+    }
 
     when (val state = uiState) {
         UiState.Loading -> LoadingView(modifier)
         is UiState.Error -> ErrorView(state.message, onRetry = viewModel::retry, modifier = modifier)
-        is UiState.Success -> OrderDetailsContent(state.data, modifier)
+        is UiState.Success -> OrderDetailsContent(
+            order = state.data,
+            isCancelling = isCancelling,
+            onCancel = viewModel::cancelOrder,
+            modifier = modifier
+        )
     }
 }
 
 @Composable
-private fun OrderDetailsContent(order: OrderModel, modifier: Modifier = Modifier) {
+private fun OrderDetailsContent(
+    order: OrderModel,
+    isCancelling: Boolean,
+    onCancel: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var confirmCancel by remember { mutableStateOf(false) }
+    if (confirmCancel) {
+        AlertDialog(
+            onDismissRequest = { confirmCancel = false },
+            title = { Text("Cancel this order?") },
+            text = { Text("Order ${order.id} will be cancelled. This can't be undone.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    confirmCancel = false
+                    onCancel()
+                }) { Text("Cancel order") }
+            },
+            dismissButton = { TextButton(onClick = { confirmCancel = false }) { Text("Keep order") } }
+        )
+    }
+
     LazyColumn(
         modifier = modifier
             .fillMaxSize()
@@ -64,12 +107,17 @@ private fun OrderDetailsContent(order: OrderModel, modifier: Modifier = Modifier
             Text("Order ${order.id}", fontSize = 20.sp, fontWeight = FontWeight.Bold)
             Spacer(Modifier.height(4.dp))
             Text("Placed on ${order.date.formatDate()}", fontSize = 14.sp)
-            Text(
-                text = statusLabel(order.status),
-                fontSize = 16.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.primary
-            )
+            if (order.status == OrderStatus.CANCELLED) {
+                Text(
+                    text = order.cancelledAt?.let { "Cancelled on ${it.formatDate()}" } ?: "Cancelled",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.error
+                )
+            } else {
+                Spacer(Modifier.height(12.dp))
+                OrderTimeline(status = order.status)
+            }
         }
 
         if (order.lines.isEmpty()) {
@@ -88,7 +136,10 @@ private fun OrderDetailsContent(order: OrderModel, modifier: Modifier = Modifier
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     if (order.totalPaise > 0) {
                         AmountRow("Subtotal", Money.format(order.subtotalPaise))
-                        AmountRow("Discount", "- ${Money.format(order.discountPaise)}")
+                        AmountRow(
+                            if (order.couponCode.isBlank()) "Discount" else "Discount (${order.couponCode})",
+                            "- ${Money.format(order.discountPaise)}"
+                        )
                         AmountRow("Tax", Money.format(order.taxPaise))
                         HorizontalDivider()
                         AmountRow("Total", Money.format(order.totalPaise), bold = true)
@@ -101,6 +152,16 @@ private fun OrderDetailsContent(order: OrderModel, modifier: Modifier = Modifier
         item {
             Text("Delivery address", fontWeight = FontWeight.SemiBold)
             Text(order.address.ifBlank { "Not available" }, fontSize = 14.sp)
+        }
+
+        if (order.status == OrderStatus.ORDERED) {
+            item {
+                SecondaryButton(
+                    text = if (isCancelling) "Cancelling..." else "Cancel order",
+                    onClick = { confirmCancel = true },
+                    enabled = !isCancelling
+                )
+            }
         }
     }
 }

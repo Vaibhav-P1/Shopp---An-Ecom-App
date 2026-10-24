@@ -7,6 +7,7 @@ import com.example.shopp.domain.PriceCalculator
 import com.example.shopp.model.AddressModel
 import com.example.shopp.model.OrderLineModel
 import com.example.shopp.model.OrderModel
+import com.example.shopp.model.OrderStatus
 import com.example.shopp.model.ProductModel
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
@@ -96,7 +97,7 @@ class OrderRepository @Inject constructor(
                         date = Timestamp.now(),
                         userId = uid,
                         items = cart,
-                        status = "ORDERED",
+                        status = OrderStatus.ORDERED,
                         address = address.formatted,
                         lines = lines,
                         subtotalPaise = breakdown.subtotalPaise,
@@ -138,10 +139,30 @@ class OrderRepository @Inject constructor(
         awaitClose { registration.remove() }
     }
 
-    suspend fun getOrder(orderId: String): Result<OrderModel> = firestoreCall {
-        firestore.collection("orders").document(orderId).get().await()
-            .toObject(OrderModel::class.java)
-            ?: throw IllegalStateException("Order not found")
+    /** Live view of one order, so status changes made elsewhere show up while the screen is open. */
+    fun observeOrder(orderId: String): Flow<OrderModel> = callbackFlow {
+        val registration = firestore.collection("orders").document(orderId)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    close(error)
+                    return@addSnapshotListener
+                }
+                val order = snapshot?.toObject(OrderModel::class.java)
+                if (order == null) close(IllegalStateException("Order not found")) else trySend(order)
+            }
+        awaitClose { registration.remove() }
+    }
+
+    /** Cancels an order that has not been packed yet. Later states are handled by the seller, not the client. */
+    suspend fun cancelOrder(orderId: String): Result<Unit> = firestoreCall {
+        val orderRef = firestore.collection("orders").document(orderId)
+        firestore.runTransaction { transaction ->
+            val status = transaction.get(orderRef).getString("status")
+            if (status != OrderStatus.ORDERED) throw IllegalStateException("This order can no longer be cancelled")
+            transaction.update(orderRef, mapOf("status" to OrderStatus.CANCELLED, "cancelledAt" to Timestamp.now()))
+            Unit
+        }.await()
+        Unit
     }
 
     private fun parseQuantities(raw: Any?): Map<String, Long> =

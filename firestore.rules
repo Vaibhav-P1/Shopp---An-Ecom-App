@@ -44,12 +44,17 @@ service cloud.firestore {
       allow write: if false;
     }
 
-    // Orders: owners create and read their own orders; they are never edited from the client.
+    // Orders: owners create and read their own orders; the only edit allowed is cancelling a fresh one.
     // `resource == null` lets order placement check whether an order id already exists (idempotency).
     match /orders/{orderId} {
       allow read: if signedIn() && (resource == null || resource.data.userId == request.auth.uid);
       allow create: if signedIn() && request.resource.data.userId == request.auth.uid;
-      allow update, delete: if false;
+      // The only client-side change is cancelling an order that has not been packed yet
+      allow update: if signedIn() && resource.data.userId == request.auth.uid
+        && resource.data.status == 'ORDERED'
+        && request.resource.data.status == 'CANCELLED'
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'cancelledAt']);
+      allow delete: if false;
     }
   }
 }

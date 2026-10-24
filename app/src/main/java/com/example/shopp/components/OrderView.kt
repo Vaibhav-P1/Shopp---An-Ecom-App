@@ -15,6 +15,7 @@ import androidx.compose.ui.unit.sp
 import com.example.shopp.ui.formatDate
 import com.example.shopp.domain.Money
 import com.example.shopp.model.OrderModel
+import com.example.shopp.model.OrderStatus
 
 @Composable
 fun OrderView(orderItem: OrderModel, onClick: () -> Unit, modifier: Modifier = Modifier) {
@@ -45,7 +46,7 @@ fun OrderView(orderItem: OrderModel, onClick: () -> Unit, modifier: Modifier = M
                 text = statusLabel(orderItem.status),
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary
+                color = if (orderItem.status == OrderStatus.CANCELLED) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
             )
 
             Spacer(modifier = Modifier.height(4.dp))
@@ -69,7 +70,4 @@ fun OrderView(orderItem: OrderModel, onClick: () -> Unit, modifier: Modifier = M
 }
 
 /** User-facing name for a stored order status. */
-fun statusLabel(status: String): String = when (status) {
-    "ORDERED" -> "Placed"
-    else -> status.lowercase().replaceFirstChar { it.uppercase() }
-}
+fun statusLabel(status: String): String = OrderStatus.label(status)

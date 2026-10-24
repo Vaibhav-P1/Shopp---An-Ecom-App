@@ -25,5 +25,6 @@ data class OrderModel(
     val taxPaise: Long = 0,
     val totalPaise: Long = 0,
     val paymentMethod: String = "",
-    val paymentId: String = ""
+    val paymentId: String = "",
+    val cancelledAt: Timestamp? = null
 )
