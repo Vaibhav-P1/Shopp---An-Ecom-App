@@ -10,10 +10,18 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-data class AuthUiState(val isLoading: Boolean = false)
+data class AuthUiState(
+    val isLoading: Boolean = false,
+    val nameError: String? = null,
+    val emailError: String? = null,
+    val passwordError: String? = null
+)
+
+enum class AuthField { Name, Email, Password }
 
 sealed interface AuthEvent {
     data object Authenticated : AuthEvent
@@ -35,14 +43,13 @@ class AuthViewModel @Inject constructor(
 
     fun login(email: String, password: String) {
         val trimmed = email.trim()
-        validateCredentials(trimmed, password)?.let { return fail(it) }
+        if (!validate(trimmed, password)) return
         submit { repository.login(trimmed, password) }
     }
 
     fun signup(email: String, name: String, password: String) {
         val trimmed = email.trim()
-        if (name.isBlank()) return fail("Please enter your name")
-        validateCredentials(trimmed, password)?.let { return fail(it) }
+        if (!validate(trimmed, password, name)) return
         submit { repository.signup(trimmed, name.trim(), password) }
     }
 
@@ -54,10 +61,26 @@ class AuthViewModel @Inject constructor(
         _uiState.value = AuthUiState(isLoading = true)
     }
 
-    private fun validateCredentials(email: String, password: String): String? = when {
-        !Patterns.EMAIL_ADDRESS.matcher(email).matches() -> "Please enter a valid email"
-        password.length < 6 -> "Password must be at least 6 characters"
-        else -> null
+    /** Clears the inline error of a field once the user edits it. */
+    fun clearError(field: AuthField) {
+        _uiState.update {
+            when (field) {
+                AuthField.Name -> it.copy(nameError = null)
+                AuthField.Email -> it.copy(emailError = null)
+                AuthField.Password -> it.copy(passwordError = null)
+            }
+        }
+    }
+
+    /** Publishes inline field errors and returns whether the input is valid. [name] is null on login. */
+    private fun validate(email: String, password: String, name: String? = null): Boolean {
+        val state = AuthUiState(
+            nameError = if (name != null && name.isBlank()) "Please enter your name" else null,
+            emailError = if (Patterns.EMAIL_ADDRESS.matcher(email).matches()) null else "Please enter a valid email",
+            passwordError = if (password.length >= 6) null else "Password must be at least 6 characters"
+        )
+        _uiState.value = state
+        return state.nameError == null && state.emailError == null && state.passwordError == null
     }
 
     private fun fail(message: String) {

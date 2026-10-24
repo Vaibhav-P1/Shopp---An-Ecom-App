@@ -25,6 +25,7 @@ import com.example.shopp.R
 import com.example.shopp.components.PrimaryButton
 import com.example.shopp.components.ShoppTextField
 import com.example.shopp.ui.theme.Spacing
+import com.example.shopp.viewmodel.AuthField
 import com.example.shopp.viewmodel.AuthViewModel
 
 @Composable
@@ -68,18 +69,26 @@ fun LoginScreen(modifier: Modifier = Modifier, onAuthenticated: () -> Unit, auth
 
         ShoppTextField(
             value = email,
-            onValueChange = { email = it },
+            onValueChange = {
+                email = it
+                authViewModel.clearError(AuthField.Email)
+            },
             label = "Email",
-            keyboardType = KeyboardType.Email
+            keyboardType = KeyboardType.Email,
+            errorMessage = uiState.emailError
         )
 
         Spacer(modifier = Modifier.height(Spacing.md))
 
         ShoppTextField(
             value = password,
-            onValueChange = { password = it },
+            onValueChange = {
+                password = it
+                authViewModel.clearError(AuthField.Password)
+            },
             label = "Password",
             isPassword = true,
+            errorMessage = uiState.passwordError,
             imeAction = ImeAction.Done,
             keyboardActions = KeyboardActions(onDone = { authViewModel.login(email, password) })
         )
