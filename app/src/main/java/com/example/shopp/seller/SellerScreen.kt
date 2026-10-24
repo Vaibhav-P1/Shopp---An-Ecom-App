@@ -42,7 +42,6 @@ import com.example.shopp.components.ErrorView
 import com.example.shopp.components.ListSkeleton
 import com.example.shopp.components.PrimaryButton
 import com.example.shopp.components.ShoppTextField
-import com.example.shopp.model.ProductModel
 import com.example.shopp.model.SellerModel
 import com.example.shopp.ui.showToast
 import com.example.shopp.ui.theme.Spacing
@@ -97,8 +96,6 @@ private fun SellerShell(
     productsViewModel: SellerProductsViewModel = hiltViewModel()
 ) {
     var tab by rememberSaveable { mutableStateOf(SellerTab.Dashboard) }
-    // null = editor closed; otherwise the product being edited (isNew means a blank one)
-    var editing by remember { mutableStateOf<EditorTarget?>(null) }
     val products by productsViewModel.products.collectAsStateWithLifecycle()
     val categories by productsViewModel.categories.collectAsStateWithLifecycle()
     val editor by productsViewModel.editor.collectAsStateWithLifecycle()
@@ -108,19 +105,13 @@ private fun SellerShell(
         productsViewModel.events.collect { event ->
             when (event) {
                 is SellerProductEvent.Message -> context.showToast(event.text)
-                SellerProductEvent.Saved -> {
-                    editing = null
-                    context.showToast("Product saved")
-                }
+                SellerProductEvent.Saved -> context.showToast("Product saved")
             }
         }
     }
-    BackHandler(enabled = editing != null) {
-        editing = null
-        productsViewModel.resetEditor()
-    }
+    BackHandler(enabled = editor != null, onBack = productsViewModel::closeEditor)
 
-    val target = editing
+    val editing = editor
     Scaffold(
         modifier = modifier,
         topBar = {
@@ -128,31 +119,24 @@ private fun SellerShell(
                 title = {
                     Text(
                         when {
-                            target == null -> seller.shopName
-                            target.product == null -> "Add product"
+                            editing == null -> seller.shopName
+                            editing.productId == null -> "Add product"
                             else -> "Edit product"
                         }
                     )
                 },
                 navigationIcon = {
-                    IconButton(onClick = {
-                        if (target == null) {
-                            onExit()
-                        } else {
-                            editing = null
-                            productsViewModel.resetEditor()
-                        }
-                    }) {
+                    IconButton(onClick = { if (editing == null) onExit() else productsViewModel.closeEditor() }) {
                         Icon(
                             Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = if (target == null) "Back to shopping" else "Close editor"
+                            contentDescription = if (editing == null) "Back to shopping" else "Close editor"
                         )
                     }
                 }
             )
         },
         bottomBar = {
-            if (target == null) {
+            if (editing == null) {
                 NavigationBar {
                     SellerTab.entries.forEach { entry ->
                         NavigationBarItem(
@@ -168,11 +152,13 @@ private fun SellerShell(
     ) { innerPadding ->
         val content = Modifier.padding(innerPadding)
         when {
-            target != null -> ProductEditor(
-                product = target.product,
+            editing != null -> ProductEditor(
+                state = editing,
                 categories = categories,
-                state = editor,
-                onSave = { draft -> productsViewModel.save(target.product?.id, draft) },
+                canUploadImages = productsViewModel.canUploadImages,
+                onDraftChange = productsViewModel::updateDraft,
+                onPickImages = productsViewModel::uploadImages,
+                onSave = productsViewModel::save,
                 modifier = content
             )
             tab == SellerTab.Dashboard -> Column(content.padding(Spacing.lg)) {
@@ -181,8 +167,8 @@ private fun SellerShell(
             tab == SellerTab.Products -> SellerProductsPage(
                 state = products,
                 onRetry = productsViewModel::retry,
-                onAdd = { editing = EditorTarget(null) },
-                onEdit = { editing = EditorTarget(it) },
+                onAdd = { productsViewModel.openEditor(null) },
+                onEdit = productsViewModel::openEditor,
                 onToggleActive = productsViewModel::setActive,
                 onDelete = productsViewModel::delete,
                 modifier = content
@@ -190,9 +176,6 @@ private fun SellerShell(
         }
     }
 }
-
-/** What the product editor is showing: a blank form when [product] is null, otherwise that product. */
-private data class EditorTarget(val product: ProductModel?)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

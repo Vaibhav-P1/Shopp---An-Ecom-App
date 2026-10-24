@@ -29,6 +29,9 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         buildConfigField("String", "RAZORPAY_KEY", "\"${localProps.getProperty("razorpay.key", "")}\"")
+        // Optional: seller image upload (Cloudinary unsigned preset). Blank disables the upload button.
+        buildConfigField("String", "CLOUDINARY_CLOUD_NAME", "\"${localProps.getProperty("cloudinary.cloudName", "")}\"")
+        buildConfigField("String", "CLOUDINARY_UPLOAD_PRESET", "\"${localProps.getProperty("cloudinary.uploadPreset", "")}\"")
     }
 
     buildTypes {

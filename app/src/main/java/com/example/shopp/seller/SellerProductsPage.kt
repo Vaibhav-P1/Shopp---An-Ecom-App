@@ -1,9 +1,15 @@
 package com.example.shopp.seller
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -24,6 +30,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.outlined.Inventory2
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -102,7 +109,7 @@ fun SellerProductsPage(
                 } else {
                     LazyColumn(
                         modifier = Modifier.weight(1f),
-                        contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = Spacing.lg),
+                        contentPadding = PaddingValues(vertical = Spacing.lg),
                         verticalArrangement = Arrangement.spacedBy(Spacing.md)
                     ) {
                         items(state.data, key = { it.id }) { product ->
@@ -146,10 +153,7 @@ private fun SellerProductRow(
                 )
             }
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Switch(
-                    checked = product.active,
-                    onCheckedChange = onToggleActive
-                )
+                Switch(checked = product.active, onCheckedChange = onToggleActive)
                 Text(if (product.active) "Visible" else "Hidden", style = MaterialTheme.typography.labelSmall)
             }
         }
@@ -166,34 +170,25 @@ private fun stockText(product: ProductModel): String = when {
     else -> product.lowStockLabel ?: "${product.stock} in stock"
 }
 
-/** Full-screen form to create ([product] == null) or edit a product. */
+/** Full-screen form to create or edit a product; all state lives in the ViewModel. */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun ProductEditor(
-    product: ProductModel?,
-    categories: List<CategoryModel>,
     state: ProductEditorState,
-    onSave: (ProductDraft) -> Unit,
+    categories: List<CategoryModel>,
+    canUploadImages: Boolean,
+    onDraftChange: ((ProductDraft) -> ProductDraft) -> Unit,
+    onPickImages: (List<Uri>) -> Unit,
+    onSave: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    var draft by remember(product?.id) {
-        mutableStateOf(
-            product?.let {
-                ProductDraft(
-                    title = it.title,
-                    description = it.description,
-                    category = it.category,
-                    price = it.price,
-                    actualPrice = it.actualPrice,
-                    stock = it.stock?.toString().orEmpty(),
-                    images = it.images,
-                    active = it.active
-                )
-            } ?: ProductDraft()
-        )
-    }
-    var newImageUrl by remember { mutableStateOf("") }
+    val draft = state.draft
     val errors = state.errors
+    var newImageUrl by remember { mutableStateOf("") }
+    val imageRoom = ProductDraftValidator.MAX_IMAGES - draft.images.size
+    val picker = rememberLauncherForActivityResult(
+        ActivityResultContracts.PickMultipleVisualMedia(ProductDraftValidator.MAX_IMAGES)
+    ) { uris -> if (uris.isNotEmpty()) onPickImages(uris) }
 
     Column(
         modifier = modifier
@@ -203,15 +198,15 @@ fun ProductEditor(
             .padding(Spacing.lg),
         verticalArrangement = Arrangement.spacedBy(Spacing.md)
     ) {
-        ShoppTextField(draft.title, { draft = draft.copy(title = it) }, "Title", errorMessage = errors.title)
-        ShoppTextField(draft.description, { draft = draft.copy(description = it) }, "Description")
+        ShoppTextField(draft.title, { v -> onDraftChange { it.copy(title = v) } }, "Title", errorMessage = errors.title)
+        ShoppTextField(draft.description, { v -> onDraftChange { it.copy(description = v) } }, "Description")
 
         Text("Category", style = MaterialTheme.typography.titleSmall)
         FlowRow(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
             categories.forEach { category ->
                 FilterChip(
                     selected = draft.category == category.id,
-                    onClick = { draft = draft.copy(category = category.id) },
+                    onClick = { onDraftChange { it.copy(category = category.id) } },
                     label = { Text(category.name) }
                 )
             }
@@ -220,24 +215,24 @@ fun ProductEditor(
 
         Row(horizontalArrangement = Arrangement.spacedBy(Spacing.md)) {
             ShoppTextField(
-                draft.price, { draft = draft.copy(price = it) }, "List price (₹)",
+                draft.price, { v -> onDraftChange { it.copy(price = v) } }, "List price (₹)",
                 keyboardType = KeyboardType.Decimal, errorMessage = errors.price, modifier = Modifier.weight(1f)
             )
             ShoppTextField(
-                draft.actualPrice, { draft = draft.copy(actualPrice = it) }, "Selling price (₹)",
+                draft.actualPrice, { v -> onDraftChange { it.copy(actualPrice = v) } }, "Selling price (₹)",
                 keyboardType = KeyboardType.Decimal, errorMessage = errors.actualPrice, modifier = Modifier.weight(1f)
             )
         }
         ShoppTextField(
-            draft.stock, { draft = draft.copy(stock = it.filter(Char::isDigit)) }, "Units in stock",
+            draft.stock, { v -> onDraftChange { it.copy(stock = v.filter(Char::isDigit)) } }, "Units in stock",
             keyboardType = KeyboardType.Number, errorMessage = errors.stock
         )
 
         Text("Images", style = MaterialTheme.typography.titleSmall)
-        if (draft.images.isNotEmpty()) {
+        if (draft.images.isNotEmpty() || state.uploadingImages > 0) {
             LazyRow(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
                 items(draft.images, key = { it }) { url ->
-                    androidx.compose.foundation.layout.Box {
+                    Box {
                         AsyncImage(
                             model = url,
                             contentDescription = "Product image",
@@ -245,44 +240,56 @@ fun ProductEditor(
                             modifier = Modifier.size(88.dp).clip(RoundedCornerShape(8.dp))
                         )
                         IconButton(
-                            onClick = { draft = draft.copy(images = draft.images - url) },
+                            onClick = { onDraftChange { it.copy(images = it.images - url) } },
                             modifier = Modifier.align(Alignment.TopEnd).size(28.dp)
                         ) {
                             Icon(Icons.Default.Close, contentDescription = "Remove image", tint = MaterialTheme.colorScheme.error)
                         }
                     }
                 }
+                items(state.uploadingImages) {
+                    Box(Modifier.size(88.dp), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator(Modifier.size(28.dp))
+                    }
+                }
             }
+        }
+        errors.images?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
+
+        if (canUploadImages) {
+            SecondaryButton(
+                text = "Upload from gallery",
+                onClick = { picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) },
+                enabled = imageRoom > state.uploadingImages
+            )
         }
         Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm), verticalAlignment = Alignment.Top) {
             ShoppTextField(
-                newImageUrl, { newImageUrl = it }, "Image URL",
-                keyboardType = KeyboardType.Uri, imeAction = ImeAction.Done,
-                errorMessage = errors.images, modifier = Modifier.weight(1f)
+                newImageUrl, { newImageUrl = it }, "Or paste an image URL",
+                keyboardType = KeyboardType.Uri, imeAction = ImeAction.Done, modifier = Modifier.weight(1f)
             )
             SecondaryButton(
                 text = "Add",
                 onClick = {
                     val url = newImageUrl.trim()
-                    if (url.startsWith("https://") && draft.images.size < ProductDraftValidator.MAX_IMAGES) {
-                        draft = draft.copy(images = draft.images + url)
-                        newImageUrl = ""
-                    }
+                    onDraftChange { it.copy(images = it.images + url) }
+                    newImageUrl = ""
                 },
-                enabled = newImageUrl.trim().startsWith("https://"),
-                modifier = Modifier.size(width = 90.dp, height = 56.dp).padding(top = 0.dp)
+                enabled = newImageUrl.trim().startsWith("https://") && imageRoom > 0,
+                modifier = Modifier.size(width = 90.dp, height = 56.dp)
             )
         }
 
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text("Visible to customers", modifier = Modifier.weight(1f))
-            Switch(checked = draft.active, onCheckedChange = { draft = draft.copy(active = it) })
+            Switch(checked = draft.active, onCheckedChange = { v -> onDraftChange { it.copy(active = v) } })
         }
 
         Spacer(Modifier.height(Spacing.sm))
         PrimaryButton(
-            text = if (product == null) "Add product" else "Save changes",
-            onClick = { onSave(draft) },
+            text = if (state.productId == null) "Add product" else "Save changes",
+            onClick = onSave,
+            enabled = state.uploadingImages == 0,
             isLoading = state.isSaving
         )
         Spacer(Modifier.height(Spacing.lg))
