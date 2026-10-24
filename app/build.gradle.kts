@@ -87,7 +87,6 @@ dependencies {
 
     implementation(libs.coil.compose)
 
-    implementation(libs.dotsindicator)
 
     implementation(libs.razorpay.checkout)
     implementation(libs.androidx.material.icons.extended)

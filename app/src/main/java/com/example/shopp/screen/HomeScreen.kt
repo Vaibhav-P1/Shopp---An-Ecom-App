@@ -77,7 +77,8 @@ fun HomeScreen(
 
     val tabColors = NavigationBarItemDefaults.colors(
         indicatorColor = MaterialTheme.colorScheme.primaryContainer,
-        selectedIconColor = MaterialTheme.colorScheme.onPrimaryContainer
+        selectedIconColor = MaterialTheme.colorScheme.onPrimaryContainer,
+        selectedTextColor = MaterialTheme.colorScheme.onPrimaryContainer
     )
     val tabIcon: @Composable (NavItem) -> Unit = { navItem ->
         if (navItem.showsCartCount) {
@@ -90,7 +91,7 @@ fun HomeScreen(
     Scaffold(
         bottomBar = {
             if (!isWide) {
-                NavigationBar {
+                NavigationBar(containerColor = MaterialTheme.colorScheme.surfaceContainer) {
                     navItemList.forEachIndexed { index, navItem ->
                         NavigationBarItem(
                             selected = index == selectedIndex,

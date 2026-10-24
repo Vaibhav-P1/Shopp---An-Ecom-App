@@ -15,12 +15,19 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.material.icons.outlined.LocationOn
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.AssistChip
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -37,6 +44,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -60,6 +68,7 @@ import com.example.shopp.viewmodel.UiState
 @Composable
 fun AddressBookPage(
     modifier: Modifier = Modifier,
+    onBack: () -> Unit,
     viewModel: AddressBookViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -77,12 +86,19 @@ fun AddressBookPage(
         }
     }
 
-    Column(modifier.fillMaxSize().padding(Spacing.lg)) {
-        Text("Saved addresses", style = MaterialTheme.typography.headlineSmall)
-        Spacer(Modifier.height(Spacing.lg))
+    Column(modifier.fillMaxSize()) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(onClick = onBack) {
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+            }
+            Text("Saved addresses", style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold))
+        }
 
         when (val state = uiState) {
-            UiState.Loading -> ListSkeleton(Modifier.weight(1f), rows = 3)
+            UiState.Loading -> ListSkeleton(Modifier.weight(1f).padding(horizontal = Spacing.lg), rows = 3)
             is UiState.Error -> ErrorView(state.message, onRetry = viewModel::retry, modifier = Modifier.weight(1f))
             is UiState.Success -> {
                 if (state.data.isEmpty()) {
@@ -94,6 +110,7 @@ fun AddressBookPage(
                 } else {
                     LazyColumn(
                         modifier = Modifier.weight(1f),
+                        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = Spacing.lg, vertical = Spacing.xs),
                         verticalArrangement = Arrangement.spacedBy(Spacing.md)
                     ) {
                         items(state.data, key = { it.id }) { address ->
@@ -106,8 +123,11 @@ fun AddressBookPage(
                         }
                     }
                 }
-                Spacer(Modifier.height(Spacing.md))
-                PrimaryButton(text = "Add new address", onClick = { editing = AddressModel() })
+                PrimaryButton(
+                    text = "Add new address",
+                    onClick = { editing = AddressModel() },
+                    modifier = Modifier.padding(horizontal = Spacing.lg, vertical = Spacing.md)
+                )
             }
         }
     }
@@ -115,7 +135,9 @@ fun AddressBookPage(
     editing?.let { address ->
         ModalBottomSheet(
             onDismissRequest = { editing = null },
-            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+            shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp),
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLowest
         ) {
             AddressForm(initial = address, onSave = viewModel::save)
         }
@@ -144,30 +166,59 @@ private fun AddressCard(
     onEdit: () -> Unit,
     onDelete: () -> Unit
 ) {
-    ShoppCard(modifier = Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(Spacing.lg)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(address.label, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+    val colors = MaterialTheme.colorScheme
+    val shape = RoundedCornerShape(22.dp)
+    ShoppCard(
+        modifier = Modifier
+            .fillMaxWidth()
+            .then(if (address.primary) Modifier.border(2.dp, colors.primary, shape) else Modifier)
+    ) {
+        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Box(
+                    Modifier.size(36.dp).clip(RoundedCornerShape(12.dp))
+                        .background(if (address.primary) colors.primaryContainer else colors.tertiaryContainer),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        Icons.Default.LocationOn, null, modifier = Modifier.size(20.dp),
+                        tint = if (address.primary) colors.onPrimaryContainer else colors.onTertiaryContainer
+                    )
+                }
+                Text(address.label, style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold), modifier = Modifier.weight(1f))
                 if (address.primary) {
-                    AssistChip(onClick = {}, label = { Text("Default") }, enabled = false)
+                    Text(
+                        "DEFAULT",
+                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                        color = colors.onPrimaryContainer,
+                        modifier = Modifier.clip(RoundedCornerShape(11.dp)).background(colors.primaryContainer).padding(horizontal = 9.dp, vertical = 3.dp)
+                    )
                 }
             }
-            Spacer(Modifier.height(Spacing.xs))
-            Text(address.formatted, style = MaterialTheme.typography.bodyMedium)
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                if (!address.primary) {
-                    TextButton(onClick = onMakePrimary) { Text("Make default") }
-                }
-                Spacer(Modifier.weight(1f))
-                IconButton(onClick = onEdit) {
-                    Icon(Icons.Default.Edit, contentDescription = "Edit ${address.label}")
-                }
-                IconButton(onClick = onDelete) {
-                    Icon(Icons.Default.Delete, contentDescription = "Delete ${address.label}")
-                }
+            Text(
+                address.formatted,
+                style = MaterialTheme.typography.bodySmall.copy(lineHeight = MaterialTheme.typography.bodySmall.fontSize * 1.55f),
+                color = colors.onSurfaceVariant
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(18.dp)) {
+                if (!address.primary) CardAction("Make default", colors.primary, onMakePrimary)
+                CardAction("Edit", colors.onSurfaceVariant, onEdit, "Edit ${address.label}")
+                CardAction("Delete", colors.error, onDelete, "Delete ${address.label}")
             }
         }
     }
+}
+
+@Composable
+private fun CardAction(label: String, color: androidx.compose.ui.graphics.Color, onClick: () -> Unit, description: String = label) {
+    Text(
+        text = label,
+        style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold),
+        color = color,
+        modifier = Modifier
+            .clickable(onClickLabel = description, role = androidx.compose.ui.semantics.Role.Button, onClick = onClick)
+            .padding(vertical = 4.dp)
+    )
 }
 
 @Composable

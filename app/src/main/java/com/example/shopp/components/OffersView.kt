@@ -31,9 +31,9 @@ import com.example.shopp.model.OfferModel
 fun OfferCard(offer: OfferModel,modifier: Modifier = Modifier) {
     Card(
         modifier = modifier
-            .height(160.dp),
-        shape = RoundedCornerShape(16.dp),
-        elevation = CardDefaults.cardElevation(4.dp)
+            .height(140.dp),
+        shape = RoundedCornerShape(22.dp),
+        elevation = CardDefaults.cardElevation(0.dp)
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
 
@@ -65,13 +65,13 @@ fun OfferCard(offer: OfferModel,modifier: Modifier = Modifier) {
                     modifier = Modifier
                         .align(Alignment.TopEnd)
                         .padding(10.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(MaterialTheme.colorScheme.primary)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(MaterialTheme.colorScheme.secondary)
                         .padding(horizontal = 8.dp, vertical = 4.dp)
                 ) {
                     Text(
                         text = offer.discount,
-                        color = Color.White,
+                        color = MaterialTheme.colorScheme.onSecondary,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold
                     )

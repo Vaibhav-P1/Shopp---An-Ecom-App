@@ -8,14 +8,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.shopp.components.BannerView
@@ -24,6 +21,9 @@ import com.example.shopp.components.ErrorView
 import com.example.shopp.components.HeaderView
 import com.example.shopp.components.HomeSkeleton
 import com.example.shopp.components.OfferCard
+import com.example.shopp.components.SearchPill
+import com.example.shopp.components.SectionHeader
+import com.example.shopp.ui.theme.Spacing
 import com.example.shopp.viewmodel.HomeUiState
 import com.example.shopp.viewmodel.HomeViewModel
 
@@ -71,36 +71,38 @@ private fun HomeContent(
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 16.dp)
+                .padding(horizontal = 20.dp)
         ) {
 
             item {
-                Spacer(modifier = Modifier.height(8.dp))
-                HeaderView(name = state.userName, onSearchClick = onSearchClick)
-                Spacer(modifier = Modifier.height(10.dp))
+                Spacer(modifier = Modifier.height(Spacing.md))
+                HeaderView(name = state.userName)
+                Spacer(modifier = Modifier.height(Spacing.lg))
+                SearchPill(onClick = onSearchClick)
+                Spacer(modifier = Modifier.height(Spacing.lg))
             }
 
             item {
-                BannerView(banners = state.banners, modifier = Modifier.height(170.dp))
-                Spacer(modifier = Modifier.height(16.dp))
+                BannerView(banners = state.banners, modifier = Modifier.height(190.dp))
+                Spacer(modifier = Modifier.height(Spacing.lg))
             }
 
             item {
-                Text(text = "Categories", fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                Spacer(modifier = Modifier.height(10.dp))
+                SectionHeader("Categories")
                 CategoriesView(categories = state.categories, onCategoryClick = onCategoryClick)
-                Spacer(modifier = Modifier.height(20.dp))
+                Spacer(modifier = Modifier.height(Spacing.xl))
             }
 
             item {
-                Text(text = "🔥 Deals & Offers", fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                Spacer(modifier = Modifier.height(10.dp))
+                SectionHeader("Deals for you")
             }
 
             items(state.offers, key = { it.id }) { offer ->
                 OfferCard(offer = offer, modifier = Modifier.fillMaxWidth())
                 Spacer(modifier = Modifier.height(12.dp))
             }
+
+            item { Spacer(Modifier.height(Spacing.lg)) }
         }
     }
 }

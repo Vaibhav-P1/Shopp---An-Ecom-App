@@ -25,6 +25,7 @@ import com.example.shopp.components.ErrorView
 import com.example.shopp.components.ProductGridSkeleton
 import com.example.shopp.components.ProductItemView
 import com.example.shopp.components.rememberAddToCart
+import com.example.shopp.components.rememberFavoriteToggle
 import com.example.shopp.viewmodel.FavoritesViewModel
 import com.example.shopp.viewmodel.UiState
 
@@ -36,6 +37,7 @@ fun FavoritePage(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val addToCart = rememberAddToCart()
+    val favorites = rememberFavoriteToggle()
 
     Column(
         modifier = modifier
@@ -64,7 +66,9 @@ fun FavoritePage(
                         ProductItemView(
                             product = product,
                             onClick = { onProductClick(product.id) },
-                            onAddToCart = { addToCart(product.id) }
+                            onAddToCart = { addToCart(product.id) },
+                            isFavorite = true,
+                            onToggleFavorite = { favorites.toggle(product.id) }
                         )
                     }
                 }

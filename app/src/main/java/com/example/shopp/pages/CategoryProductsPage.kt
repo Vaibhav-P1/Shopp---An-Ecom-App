@@ -1,6 +1,16 @@
 package com.example.shopp.pages
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.ui.text.font.FontWeight
+import com.example.shopp.components.rememberFavoriteToggle
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.fillMaxSize
@@ -37,23 +47,64 @@ private const val PREFETCH_DISTANCE = 4
 @Composable
 fun CategoryProductsPage(
     modifier: Modifier = Modifier,
+    onBack: () -> Unit,
+    onSearchClick: () -> Unit,
     onProductClick: (String) -> Unit,
     viewModel: CategoryProductsViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val title by viewModel.title.collectAsStateWithLifecycle()
+    val loaded = (uiState as? UiState.Success)?.data
 
-    when (val state = uiState) {
-        UiState.Loading -> ProductGridSkeleton(modifier)
-        is UiState.Error -> ErrorView(state.message, onRetry = viewModel::retry, modifier = modifier)
-        is UiState.Success -> if (state.data.products.isEmpty()) {
-            EmptyView("No products in this category yet", modifier)
-        } else {
-            ProductGrid(
-                content = state.data,
-                onProductClick = onProductClick,
-                onLoadMore = viewModel::loadMore,
-                modifier = modifier
-            )
+    Column(modifier.fillMaxSize()) {
+        CategoryHeader(
+            title = title.ifBlank { "Products" },
+            subtitle = loaded?.let {
+                val count = it.products.size
+                val label = if (count == 1) "product" else "products"
+                if (it.endReached) "$count $label" else "$count+ $label"
+            },
+            onBack = onBack,
+            onSearchClick = onSearchClick
+        )
+        when (val state = uiState) {
+            UiState.Loading -> ProductGridSkeleton()
+            is UiState.Error -> ErrorView(state.message, onRetry = viewModel::retry)
+            is UiState.Success -> if (state.data.products.isEmpty()) {
+                EmptyView("No products in this category yet")
+            } else {
+                ProductGrid(
+                    content = state.data,
+                    onProductClick = onProductClick,
+                    onLoadMore = viewModel::loadMore
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun CategoryHeader(
+    title: String,
+    subtitle: String?,
+    onBack: () -> Unit,
+    onSearchClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        IconButton(onClick = onBack) {
+            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+        }
+        Column(Modifier.weight(1f)) {
+            Text(title, style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold))
+            if (subtitle != null) {
+                Text(subtitle, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+        IconButton(onClick = onSearchClick) {
+            Icon(Icons.Default.Search, contentDescription = "Search")
         }
     }
 }
@@ -66,6 +117,7 @@ private fun ProductGrid(
     modifier: Modifier = Modifier
 ) {
     val addToCart = rememberAddToCart()
+    val favorites = rememberFavoriteToggle()
     val gridState = rememberLazyGridState()
 
     LaunchedEffect(gridState, content.products.size, content.endReached, content.loadMoreFailed) {
@@ -88,7 +140,9 @@ private fun ProductGrid(
             ProductItemView(
                 product = product,
                 onClick = { onProductClick(product.id) },
-                onAddToCart = { addToCart(product.id) }
+                onAddToCart = { addToCart(product.id) },
+                isFavorite = favorites.isFavorite(product.id),
+                onToggleFavorite = { favorites.toggle(product.id) }
             )
         }
         if (content.isLoadingMore) {

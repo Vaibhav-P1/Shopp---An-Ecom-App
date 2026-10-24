@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.toRoute
 import com.example.shopp.CategoryProducts
+import com.example.shopp.data.CategoryRepository
 import com.example.shopp.data.PageCursor
 import com.example.shopp.data.ProductPage
 import com.example.shopp.data.ProductRepository
@@ -26,7 +27,8 @@ data class CategoryProductsContent(
 @HiltViewModel
 class CategoryProductsViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
-    private val repository: ProductRepository
+    private val repository: ProductRepository,
+    private val categoryRepository: CategoryRepository
 ) : ViewModel() {
 
     private val categoryId: String = savedStateHandle.toRoute<CategoryProducts>().categoryId
@@ -34,10 +36,20 @@ class CategoryProductsViewModel @Inject constructor(
     private val _uiState = MutableStateFlow<UiState<CategoryProductsContent>>(UiState.Loading)
     val uiState: StateFlow<UiState<CategoryProductsContent>> = _uiState.asStateFlow()
 
+    private val _title = MutableStateFlow("")
+
+    /** Name of the category, empty until it has loaded. */
+    val title: StateFlow<String> = _title.asStateFlow()
+
     private var cursor: PageCursor? = null
 
     init {
         loadFirstPage()
+        viewModelScope.launch {
+            categoryRepository.getCategories().onSuccess { categories ->
+                _title.value = categories.firstOrNull { it.id == categoryId }?.name.orEmpty()
+            }
+        }
     }
 
     fun retry() {

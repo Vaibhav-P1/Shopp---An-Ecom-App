@@ -1,57 +1,63 @@
 package com.example.shopp.pages
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.TextButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
-import com.example.shopp.ui.formatDate
 import com.example.shopp.components.ErrorView
-import com.example.shopp.components.OrderTimeline
-import com.example.shopp.components.SecondaryButton
-import com.example.shopp.ui.showToast
-import com.example.shopp.model.OrderStatus
 import com.example.shopp.components.LoadingView
+import com.example.shopp.components.SecondaryButton
 import com.example.shopp.components.ShoppCard
-import com.example.shopp.components.statusLabel
+import com.example.shopp.components.StatusPill
+import com.example.shopp.components.VerticalOrderTimeline
 import com.example.shopp.domain.Money
 import com.example.shopp.model.OrderLineModel
 import com.example.shopp.model.OrderModel
+import com.example.shopp.model.OrderStatus
+import com.example.shopp.ui.formatDate
+import com.example.shopp.ui.showToast
+import com.example.shopp.ui.theme.Spacing
 import com.example.shopp.viewmodel.OrderDetailsViewModel
 import com.example.shopp.viewmodel.UiState
 
 @Composable
 fun OrderDetailsPage(
     modifier: Modifier = Modifier,
+    onBack: () -> Unit,
     viewModel: OrderDetailsViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -62,15 +68,47 @@ fun OrderDetailsPage(
         viewModel.messages.collect { context.showToast(it) }
     }
 
-    when (val state = uiState) {
-        UiState.Loading -> LoadingView(modifier)
-        is UiState.Error -> ErrorView(state.message, onRetry = viewModel::retry, modifier = modifier)
-        is UiState.Success -> OrderDetailsContent(
-            order = state.data,
-            isCancelling = isCancelling,
-            onCancel = viewModel::cancelOrder,
-            modifier = modifier
-        )
+    Column(modifier.fillMaxSize()) {
+        when (val state = uiState) {
+            UiState.Loading -> {
+                DetailsHeader(title = "Order", subtitle = null, onBack = onBack)
+                LoadingView()
+            }
+            is UiState.Error -> {
+                DetailsHeader(title = "Order", subtitle = null, onBack = onBack)
+                ErrorView(state.message, onRetry = viewModel::retry)
+            }
+            is UiState.Success -> {
+                DetailsHeader(
+                    title = state.data.id,
+                    subtitle = "Placed ${state.data.date.formatDate()}",
+                    onBack = onBack
+                )
+                OrderDetailsContent(
+                    order = state.data,
+                    isCancelling = isCancelling,
+                    onCancel = viewModel::cancelOrder
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun DetailsHeader(title: String, subtitle: String?, onBack: () -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        IconButton(onClick = onBack) {
+            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+        }
+        Column {
+            Text(title, style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold))
+            if (subtitle != null) {
+                Text(subtitle, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
     }
 }
 
@@ -96,52 +134,57 @@ private fun OrderDetailsContent(
             dismissButton = { TextButton(onClick = { confirmCancel = false }) { Text("Keep order") } }
         )
     }
+    val colors = MaterialTheme.colorScheme
 
     LazyColumn(
-        modifier = modifier
-            .fillMaxSize()
-            .padding(16.dp),
+        modifier = modifier.fillMaxSize(),
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 16.dp, vertical = Spacing.sm),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         item {
-            Text("Order ${order.id}", fontSize = 20.sp, fontWeight = FontWeight.Bold)
-            Spacer(Modifier.height(4.dp))
-            Text("Placed on ${order.date.formatDate()}", fontSize = 14.sp)
-            if (order.status == OrderStatus.CANCELLED) {
-                Text(
-                    text = order.cancelledAt?.let { "Cancelled on ${it.formatDate()}" } ?: "Cancelled",
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.error
-                )
-            } else {
-                Spacer(Modifier.height(12.dp))
-                OrderTimeline(status = order.status)
+            ShoppCard(Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(16.dp)) {
+                    if (order.status == OrderStatus.CANCELLED) {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            StatusPill(order.status)
+                            Text(
+                                text = order.cancelledAt?.let { "on ${it.formatDate()}" } ?: "",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = colors.onSurfaceVariant
+                            )
+                        }
+                    } else {
+                        VerticalOrderTimeline(
+                            status = order.status,
+                            captions = mapOf(OrderStatus.ORDERED to order.date.formatDate())
+                        )
+                    }
+                }
             }
-        }
-
-        if (order.lines.isEmpty()) {
-            item {
-                Text(
-                    "${order.items.values.sum()} item(s). Item details are not available for this order.",
-                    fontSize = 14.sp
-                )
-            }
-        } else {
-            items(order.lines, key = { it.productId }) { line -> OrderLineRow(line) }
         }
 
         item {
-            ShoppCard(modifier = Modifier.fillMaxWidth()) {
-                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    if (order.totalPaise > 0) {
-                        AmountRow("Subtotal", Money.format(order.subtotalPaise))
-                        AmountRow(
-                            if (order.couponCode.isBlank()) "Discount" else "Discount (${order.couponCode})",
-                            "- ${Money.format(order.discountPaise)}"
+            ShoppCard(Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    if (order.lines.isEmpty()) {
+                        Text(
+                            "${order.items.values.sum()} item(s). Item details are not available for this order.",
+                            style = MaterialTheme.typography.bodySmall
                         )
+                    } else {
+                        order.lines.forEach { OrderLineRow(it) }
+                    }
+                    if (order.totalPaise > 0) {
+                        HorizontalDivider(color = colors.surfaceVariant)
+                        AmountRow("Subtotal", Money.format(order.subtotalPaise))
+                        if (order.discountPaise > 0) {
+                            AmountRow(
+                                if (order.couponCode.isBlank()) "Discount" else "Discount (${order.couponCode})",
+                                "-${Money.format(order.discountPaise)}",
+                                highlight = true
+                            )
+                        }
                         AmountRow("Tax", Money.format(order.taxPaise))
-                        HorizontalDivider()
                         AmountRow("Total", Money.format(order.totalPaise), bold = true)
                     }
                     AmountRow("Payment", paymentLabel(order))
@@ -150,47 +193,83 @@ private fun OrderDetailsContent(
         }
 
         item {
-            Text("Delivery address", fontWeight = FontWeight.SemiBold)
-            Text(order.address.ifBlank { "Not available" }, fontSize = 14.sp)
-        }
-
-        if (order.status == OrderStatus.ORDERED) {
-            item {
-                SecondaryButton(
-                    text = if (isCancelling) "Cancelling..." else "Cancel order",
-                    onClick = { confirmCancel = true },
-                    enabled = !isCancelling
-                )
+            ShoppCard(Modifier.fillMaxWidth()) {
+                Row(Modifier.padding(14.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Box(
+                        Modifier.size(36.dp).clip(RoundedCornerShape(12.dp)).background(colors.primaryContainer),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(Icons.Default.LocationOn, null, tint = colors.onPrimaryContainer, modifier = Modifier.size(20.dp))
+                    }
+                    Column {
+                        Text("Delivering to", style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.SemiBold))
+                        Text(
+                            order.address.ifBlank { "Not available" },
+                            style = MaterialTheme.typography.bodySmall.copy(lineHeight = MaterialTheme.typography.bodySmall.fontSize * 1.5f),
+                            color = colors.onSurfaceVariant
+                        )
+                    }
+                }
             }
         }
+
+        if (order.status != OrderStatus.CANCELLED && order.status != OrderStatus.DELIVERED) {
+            item {
+                if (order.status == OrderStatus.ORDERED) {
+                    SecondaryButton(
+                        text = if (isCancelling) "Cancelling..." else "Cancel order",
+                        onClick = { confirmCancel = true },
+                        enabled = !isCancelling
+                    )
+                } else {
+                    SecondaryButton(text = "Cancel unavailable after packing", onClick = {}, enabled = false)
+                }
+            }
+        }
+        item { Box(Modifier.height(Spacing.lg)) }
     }
 }
 
 @Composable
 private fun OrderLineRow(line: OrderLineModel) {
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         AsyncImage(
-            model = line.imageUrl,
+            model = line.imageUrl.ifBlank { null },
             contentDescription = line.title,
-            contentScale = ContentScale.Crop,
+            contentScale = ContentScale.Fit,
             modifier = Modifier
-                .size(64.dp)
-                .clip(RoundedCornerShape(8.dp))
+                .size(44.dp)
+                .clip(RoundedCornerShape(12.dp))
+                .background(MaterialTheme.colorScheme.surfaceContainer)
         )
-        Column(Modifier.weight(1f)) {
-            Text(line.title, fontWeight = FontWeight.SemiBold, maxLines = 2)
-            Text("${Money.format(line.unitPricePaise)} × ${line.quantity}", fontSize = 14.sp)
-        }
-        Text(Money.format(line.unitPricePaise * line.quantity), fontWeight = FontWeight.SemiBold)
+        Text(
+            text = "${line.title}  ×${line.quantity}",
+            style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Medium),
+            maxLines = 2,
+            modifier = Modifier.weight(1f)
+        )
+        Text(
+            Money.format(line.unitPricePaise * line.quantity),
+            style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.SemiBold)
+        )
     }
 }
 
 @Composable
-private fun AmountRow(label: String, value: String, bold: Boolean = false) {
-    val weight = if (bold) FontWeight.Bold else FontWeight.Normal
+private fun AmountRow(label: String, value: String, bold: Boolean = false, highlight: Boolean = false) {
+    val style = if (bold) {
+        MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold)
+    } else {
+        MaterialTheme.typography.bodySmall.copy(fontWeight = if (highlight) FontWeight.SemiBold else FontWeight.Normal)
+    }
+    val color = when {
+        highlight -> MaterialTheme.colorScheme.primary
+        bold -> MaterialTheme.colorScheme.onSurface
+        else -> MaterialTheme.colorScheme.onSurfaceVariant
+    }
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-        Text(label, fontWeight = weight)
-        Text(value, fontWeight = weight)
+        Text(label, style = style, color = color)
+        Text(value, style = style, color = color)
     }
 }
 

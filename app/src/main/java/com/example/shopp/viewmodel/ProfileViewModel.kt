@@ -4,6 +4,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.shopp.data.AuthRepository
 import com.example.shopp.data.CartRepository
+import com.example.shopp.data.FavoritesRepository
+import com.example.shopp.data.OrderRepository
+import com.example.shopp.data.ThemePreferenceRepository
 import com.example.shopp.data.UserRepository
 import com.example.shopp.model.UserModel
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -18,7 +21,12 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-data class ProfileData(val user: UserModel, val cartItemCount: Long)
+data class ProfileData(
+    val user: UserModel,
+    val cartItemCount: Long,
+    val orderCount: Int = 0,
+    val favoriteCount: Int = 0
+)
 
 sealed interface ProfileEvent {
     data class Message(val text: String) : ProfileEvent
@@ -29,11 +37,17 @@ sealed interface ProfileEvent {
 class ProfileViewModel @Inject constructor(
     private val userRepository: UserRepository,
     private val cartRepository: CartRepository,
-    private val authRepository: AuthRepository
+    private val authRepository: AuthRepository,
+    private val orderRepository: OrderRepository,
+    private val favoritesRepository: FavoritesRepository,
+    private val themePreferences: ThemePreferenceRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<UiState<ProfileData>>(UiState.Loading)
     val uiState: StateFlow<UiState<ProfileData>> = _uiState.asStateFlow()
+
+    /** Explicit dark-mode choice, or null while following the system. */
+    val darkTheme: StateFlow<Boolean?> = themePreferences.dark
 
     private val _events = Channel<ProfileEvent>(Channel.BUFFERED)
     val events = _events.receiveAsFlow()
@@ -52,22 +66,37 @@ class ProfileViewModel @Inject constructor(
         send(ProfileEvent.SignedOut)
     }
 
+    fun setDarkTheme(enabled: Boolean) = themePreferences.setDark(enabled)
+
     private fun load() {
         viewModelScope.launch {
             userRepository.getProfile().fold(
                 onSuccess = { user ->
-                    _uiState.value = UiState.Success(ProfileData(user, user.cartItems.values.sum()))
-                    observeCartCount()
+                    // Profiles created by Google sign-in can have blank fields, so fall back to the account
+                    val named = user.copy(
+                        name = user.name.ifBlank { authRepository.displayName.orEmpty() },
+                        email = user.email.ifBlank { authRepository.email.orEmpty() }
+                    )
+                    _uiState.value = UiState.Success(ProfileData(named, user.cartItems.values.sum()))
+                    observeCounts()
                 },
                 onFailure = { _uiState.value = UiState.Error(it.localizedMessage ?: "Something went wrong") }
             )
         }
     }
 
-    /** Keeps the cart count live, so it is right after returning from the cart tab. */
-    private fun observeCartCount() {
+    /** Keeps the cart, order and favourite counts live, so they are right after coming back to the tab. */
+    private fun observeCounts() {
         cartRepository.observeCart()
             .onEach { cart -> updateData { data -> data.copy(cartItemCount = cart.values.sum()) } }
+            .catch { }
+            .launchIn(viewModelScope)
+        orderRepository.observeOrders()
+            .onEach { orders -> updateData { data -> data.copy(orderCount = orders.size) } }
+            .catch { }
+            .launchIn(viewModelScope)
+        favoritesRepository.observeFavorites()
+            .onEach { ids -> updateData { data -> data.copy(favoriteCount = ids.size) } }
             .catch { }
             .launchIn(viewModelScope)
     }

@@ -20,6 +20,9 @@ class AuthRepository @Inject constructor(
 
     val currentUserId: String? get() = auth.currentUser?.uid
 
+    val displayName: String? get() = auth.currentUser?.displayName
+    val email: String? get() = auth.currentUser?.email
+
     fun signOut() = auth.signOut()
 
     suspend fun login(email: String, password: String): Result<Unit> = runCatchingAuth {

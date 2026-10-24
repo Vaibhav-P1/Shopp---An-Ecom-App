@@ -8,6 +8,7 @@ import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalContext
 
 private val DarkColorScheme = darkColorScheme(
@@ -94,3 +95,7 @@ fun ShoppTheme(
         content = content
     )
 }
+
+/** Whether the active app theme is dark, including when the user overrides the system setting. */
+@Composable
+fun isAppDarkTheme(): Boolean = MaterialTheme.colorScheme.surface.luminance() < 0.5f

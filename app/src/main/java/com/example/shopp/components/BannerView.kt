@@ -1,8 +1,14 @@
 package com.example.shopp.components
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.width
+import androidx.compose.ui.Alignment
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
@@ -14,12 +20,10 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import kotlinx.coroutines.delay
-import com.tbuonomo.viewpagerdotsindicator.compose.DotsIndicator
-import com.tbuonomo.viewpagerdotsindicator.compose.model.DotGraphic
-import com.tbuonomo.viewpagerdotsindicator.compose.type.ShiftIndicatorType
 
 private const val BANNER_INTERVAL_MS = 4_000L
 
@@ -41,27 +45,38 @@ fun BannerView(banners: List<String>, modifier: Modifier = Modifier) {
         }
         HorizontalPager(
             state = pagerState,
-            pageSpacing = 24.dp,
+            pageSpacing = 16.dp,
+            modifier = Modifier.weight(1f)
         ) {
             AsyncImage(
                 model = banners[it],
                 contentDescription = "Promotion ${it + 1} of ${banners.size}",
+                contentScale = ContentScale.Crop,
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(16.dp))
+                    .fillMaxSize()
+                    .clip(RoundedCornerShape(26.dp))
 
             )
         }
         Spacer(modifier = Modifier.height(10.dp))
 
-        DotsIndicator(
-            dotCount = banners.size,
-            type = ShiftIndicatorType(DotGraphic(
-                color = MaterialTheme.colorScheme.primary,
-                size = 6.dp
-            )),
-            pagerState = pagerState
-        )
-
+        Row(
+            Modifier.align(Alignment.CenterHorizontally),
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            repeat(banners.size) { index ->
+                val selected = index == pagerState.currentPage
+                Box(
+                    Modifier
+                        .height(6.dp)
+                        .width(if (selected) 20.dp else 6.dp)
+                        .clip(RoundedCornerShape(3.dp))
+                        .background(
+                            if (selected) MaterialTheme.colorScheme.primary
+                            else MaterialTheme.colorScheme.outlineVariant
+                        )
+                )
+            }
+        }
     }
 }

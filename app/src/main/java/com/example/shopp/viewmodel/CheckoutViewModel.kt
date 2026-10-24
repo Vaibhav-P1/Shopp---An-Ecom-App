@@ -38,6 +38,7 @@ data class CheckoutLine(
     val title: String,
     val unitPricePaise: Long?,
     val quantity: Long,
+    val imageUrl: String = "",
     /** False when the product was hidden, sold out, or has fewer units than requested. */
     val available: Boolean = true
 )
@@ -210,6 +211,7 @@ class CheckoutViewModel @Inject constructor(
                         title = product?.title ?: "Product no longer available",
                         unitPricePaise = product?.let { Money.parsePaise(it.actualPrice) },
                         quantity = quantity,
+                        imageUrl = product?.images?.firstOrNull().orEmpty(),
                         available = product != null && product.isAvailable && (product.stock == null || quantity <= product.stock)
                     )
                 }.sortedBy { it.title }

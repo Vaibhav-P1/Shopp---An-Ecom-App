@@ -17,11 +17,13 @@ import com.example.shopp.pages.ProductDetailsPage
 import com.example.shopp.screen.AuthScreen
 import com.example.shopp.screen.HomeScreen
 import com.example.shopp.screen.LoginScreen
+import com.example.shopp.screen.OnboardingScreen
+import com.example.shopp.screen.OrderPlacedScreen
 import com.example.shopp.screen.SignupScreen
 import com.example.shopp.seller.SellerScreen
 
 @Composable
-fun AppNavigation(isLoggedIn: Boolean) {
+fun AppNavigation(isLoggedIn: Boolean, onboardingSeen: Boolean, onOnboardingFinished: () -> Unit) {
 
     // Full-screen destinations keep clear of the system bars and keyboard. Auth screens handle
     // this themselves (scrollable layout) and Home's tab Scaffold already applies the bars.
@@ -29,7 +31,21 @@ fun AppNavigation(isLoggedIn: Boolean) {
 
     val navController = rememberNavController()
 
-    NavHost(navController = navController, startDestination = if (isLoggedIn) Home else Auth) {
+    NavHost(
+        navController = navController,
+        startDestination = when {
+            isLoggedIn -> Home
+            onboardingSeen -> Auth
+            else -> Onboarding
+        }
+    ) {
+
+        composable<Onboarding> {
+            OnboardingScreen(onFinish = {
+                onOnboardingFinished()
+                navController.navigate(Auth) { popUpTo<Onboarding> { inclusive = true } }
+            })
+        }
 
         composable<Auth> {
             AuthScreen(
@@ -40,11 +56,19 @@ fun AppNavigation(isLoggedIn: Boolean) {
         }
 
         composable<Login> {
-            LoginScreen(onAuthenticated = { navController.goHomeAfterAuth() })
+            LoginScreen(
+                onBack = { navController.popBackStack() },
+                onSignupClick = { navController.navigate(Signup) { popUpTo<Login> { inclusive = true } } },
+                onAuthenticated = { navController.goHomeAfterAuth() }
+            )
         }
 
         composable<Signup> {
-            SignupScreen(onAuthenticated = { navController.goHomeAfterAuth() })
+            SignupScreen(
+                onBack = { navController.popBackStack() },
+                onLoginClick = { navController.navigate(Login) { popUpTo<Signup> { inclusive = true } } },
+                onAuthenticated = { navController.goHomeAfterAuth() }
+            )
         }
 
         composable<Home> {
@@ -64,7 +88,7 @@ fun AppNavigation(isLoggedIn: Boolean) {
         }
 
         composable<AddressBook> {
-            AddressBookPage(modifier = insets)
+            AddressBookPage(modifier = insets, onBack = { navController.popBackStack() })
         }
 
         composable<Search> {
@@ -78,13 +102,15 @@ fun AppNavigation(isLoggedIn: Boolean) {
         composable<CategoryProducts> {
             CategoryProductsPage(
                 modifier = insets,
+                onBack = { navController.popBackStack() },
+                onSearchClick = { navController.navigate(Search) },
                 onProductClick = { productId -> navController.navigate(ProductDetails(productId)) }
             )
         }
 
         composable<ProductDetails> {
             ProductDetailsPage(
-                modifier = insets,
+                onBack = { navController.popBackStack() },
                 onProductClick = { productId -> navController.navigate(ProductDetails(productId)) }
             )
         }
@@ -92,23 +118,34 @@ fun AppNavigation(isLoggedIn: Boolean) {
         composable<Checkout> {
             CheckoutPage(
                 modifier = insets,
-                onOrderPlaced = {
-                    // Wipe the back stack so Back can't return to checkout
-                    navController.navigate(Home) { popUpTo(0) { inclusive = true } }
+                onBack = { navController.popBackStack() },
+                onOrderPlaced = { orderId ->
+                    // Replace checkout with the confirmation so Back can't return to it
+                    navController.navigate(OrderPlaced(orderId)) { popUpTo<Checkout> { inclusive = true } }
                 },
                 onManageAddresses = { navController.navigate(AddressBook) }
+            )
+        }
+
+        composable<OrderPlaced> {
+            OrderPlacedScreen(
+                onTrackOrder = { orderId ->
+                    navController.navigate(OrderDetails(orderId)) { popUpTo<OrderPlaced> { inclusive = true } }
+                },
+                onContinueShopping = { navController.popBackStack<Home>(inclusive = false) }
             )
         }
 
         composable<Orders> {
             OrdersPage(
                 modifier = insets,
+                onBack = { navController.popBackStack() },
                 onOrderClick = { orderId -> navController.navigate(OrderDetails(orderId)) }
             )
         }
 
         composable<OrderDetails> {
-            OrderDetailsPage(insets)
+            OrderDetailsPage(modifier = insets, onBack = { navController.popBackStack() })
         }
 
         composable<Seller> {

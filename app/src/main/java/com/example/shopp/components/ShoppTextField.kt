@@ -9,6 +9,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -16,6 +17,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -33,7 +35,8 @@ fun ShoppTextField(
     keyboardType: KeyboardType = KeyboardType.Text,
     imeAction: ImeAction = ImeAction.Next,
     keyboardActions: KeyboardActions = KeyboardActions.Default,
-    errorMessage: String? = null
+    errorMessage: String? = null,
+    leadingIcon: ImageVector? = null
 ) {
     var passwordVisible by remember { mutableStateOf(false) }
     val masked = isPassword && !passwordVisible
@@ -42,6 +45,7 @@ fun ShoppTextField(
         value = value,
         onValueChange = onValueChange,
         label = { Text(label) },
+        leadingIcon = leadingIcon?.let { icon -> { Icon(imageVector = icon, contentDescription = null) } },
         singleLine = true,
         isError = errorMessage != null,
         supportingText = errorMessage?.let { message -> { Text(message) } },
@@ -61,7 +65,11 @@ fun ShoppTextField(
             imeAction = imeAction
         ),
         keyboardActions = keyboardActions,
-        shape = MaterialTheme.shapes.medium,
+        shape = MaterialTheme.shapes.large,
+        colors = OutlinedTextFieldDefaults.colors(
+            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
+            focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerLowest
+        ),
         modifier = modifier.fillMaxWidth()
     )
 }

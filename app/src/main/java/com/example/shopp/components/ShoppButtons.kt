@@ -1,6 +1,7 @@
 package com.example.shopp.components
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -18,7 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.example.shopp.ui.theme.Spacing
 
-private val ButtonHeight = 52.dp
+private val ButtonHeight = 56.dp
 
 /** Full-width filled button. While [isLoading] it shows a spinner and ignores taps. */
 @Composable
@@ -32,7 +33,7 @@ fun PrimaryButton(
     Button(
         onClick = onClick,
         enabled = enabled && !isLoading,
-        shape = MaterialTheme.shapes.medium,
+        shape = MaterialTheme.shapes.large,
         modifier = modifier
             .fillMaxWidth()
             .height(ButtonHeight)
@@ -61,7 +62,7 @@ fun SecondaryButton(
     OutlinedButton(
         onClick = onClick,
         enabled = enabled,
-        shape = MaterialTheme.shapes.medium,
+        shape = MaterialTheme.shapes.large,
         modifier = modifier
             .fillMaxWidth()
             .height(ButtonHeight)
@@ -71,5 +72,39 @@ fun SecondaryButton(
             Spacer(Modifier.size(Spacing.sm))
         }
         Text(text = text, style = MaterialTheme.typography.titleMedium)
+    }
+}
+
+/** Full-width filled button with a label on the left and a value (usually a total) on the right. */
+@Composable
+fun SpaceBetweenButton(
+    start: String,
+    end: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    isLoading: Boolean = false
+) {
+    Button(
+        onClick = onClick,
+        enabled = enabled && !isLoading,
+        shape = MaterialTheme.shapes.large,
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 22.dp),
+        modifier = modifier
+            .fillMaxWidth()
+            .height(ButtonHeight)
+    ) {
+        if (isLoading) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(20.dp),
+                strokeWidth = 2.dp,
+                color = LocalContentColor.current
+            )
+        } else {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text(text = start, style = MaterialTheme.typography.titleMedium)
+                Text(text = end, style = MaterialTheme.typography.titleMedium)
+            }
+        }
     }
 }

@@ -17,6 +17,13 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.ui.text.font.FontWeight
+import com.example.shopp.components.ActiveFilterChip
+import com.example.shopp.components.FavoriteToggle
+import com.example.shopp.components.ShoppFilterChip
+import com.example.shopp.components.rememberFavoriteToggle
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
@@ -26,7 +33,6 @@ import androidx.compose.material.icons.outlined.SearchOff
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.InputChip
@@ -80,6 +86,7 @@ fun SearchPage(
     val filters by viewModel.filters.collectAsStateWithLifecycle()
     val recent by viewModel.recent.collectAsStateWithLifecycle()
     val addToCart = rememberAddToCart()
+    val favorites = rememberFavoriteToggle()
     val focusManager = LocalFocusManager.current
     val focusRequester = remember { FocusRequester() }
     var showFilters by remember { mutableStateOf(false) }
@@ -100,6 +107,12 @@ fun SearchPage(
             focusRequester = focusRequester
         )
 
+        ActiveFilters(
+            filters = filters,
+            categories = (uiState as? UiState.Success)?.data?.categories.orEmpty(),
+            onChange = viewModel::applyFilters
+        )
+
         when (val state = uiState) {
             UiState.Loading -> ProductGridSkeleton()
             is UiState.Error -> ErrorView(state.message, onRetry = viewModel::retry)
@@ -117,7 +130,8 @@ fun SearchPage(
                     viewModel.commitQuery()
                     onProductClick(id)
                 },
-                onAddToCart = addToCart
+                onAddToCart = addToCart,
+                favorites = favorites
             )
         }
     }
@@ -126,7 +140,9 @@ fun SearchPage(
         val content = (uiState as? UiState.Success)?.data
         ModalBottomSheet(
             onDismissRequest = { showFilters = false },
-            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+            shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp),
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLowest
         ) {
             FilterSheet(
                 initial = filters,
@@ -171,7 +187,12 @@ private fun SearchBar(
                 }
             },
             singleLine = true,
-            shape = MaterialTheme.shapes.extraLarge,
+            shape = RoundedCornerShape(26.dp),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
+                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
+                unfocusedBorderColor = MaterialTheme.colorScheme.surfaceVariant
+            ),
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
             keyboardActions = KeyboardActions(onSearch = { onSearch() })
         )
@@ -202,7 +223,8 @@ private fun SearchResults(
     onRecentRemove: (String) -> Unit,
     onRecentClear: () -> Unit,
     onProductClick: (String) -> Unit,
-    onAddToCart: (String) -> Unit
+    onAddToCart: (String) -> Unit,
+    favorites: FavoriteToggle
 ) {
     if (content.results.isEmpty()) {
         EmptyView(
@@ -225,7 +247,7 @@ private fun SearchResults(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Text("Recent searches", style = MaterialTheme.typography.titleSmall)
+                        Text("Recent searches", style = MaterialTheme.typography.titleMedium)
                         TextButton(onClick = onRecentClear) { Text("Clear all") }
                     }
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
@@ -261,7 +283,9 @@ private fun SearchResults(
             ProductItemView(
                 product = product,
                 onClick = { onProductClick(product.id) },
-                onAddToCart = { onAddToCart(product.id) }
+                onAddToCart = { onAddToCart(product.id) },
+                isFavorite = favorites.isFavorite(product.id),
+                onToggleFavorite = { favorites.toggle(product.id) }
             )
         }
     }
@@ -288,18 +312,25 @@ private fun FilterSheet(
         modifier = Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = Spacing.xl, vertical = Spacing.sm),
         verticalArrangement = Arrangement.spacedBy(Spacing.md)
     ) {
-        Text("Filters", style = MaterialTheme.typography.titleLarge)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("Filters", style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold))
+            TextButton(onClick = { onApply(SearchFilters()) }) { Text("Reset") }
+        }
 
         if (!content?.categories.isNullOrEmpty()) {
             Text("Category", style = MaterialTheme.typography.titleSmall)
             FlowRow(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
                 content?.categories.orEmpty().forEach { category ->
-                    FilterChip(
+                    ShoppFilterChip(
+                        label = category.name,
                         selected = category.id in categoryIds,
                         onClick = {
                             categoryIds = if (category.id in categoryIds) categoryIds - category.id else categoryIds + category.id
-                        },
-                        label = { Text(category.name) }
+                        }
                     )
                 }
             }
@@ -308,7 +339,8 @@ private fun FilterSheet(
         Text("Price", style = MaterialTheme.typography.titleSmall)
         Text(
             text = "${Money.format(priceRange.start.toLong() * 100)} - ${Money.format(priceRange.endInclusive.toLong() * 100)}",
-            style = MaterialTheme.typography.bodyMedium
+            style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold),
+            color = MaterialTheme.colorScheme.primary
         )
         RangeSlider(
             value = priceRange,
@@ -319,10 +351,10 @@ private fun FilterSheet(
         Text("Sort by", style = MaterialTheme.typography.titleSmall)
         FlowRow(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
             SortOrder.entries.forEach { option ->
-                FilterChip(
+                ShoppFilterChip(
+                    label = option.label,
                     selected = sort == option,
-                    onClick = { sort = option },
-                    label = { Text(option.label) }
+                    onClick = { sort = option }
                 )
             }
         }
@@ -330,12 +362,12 @@ private fun FilterSheet(
         Spacer(Modifier.height(Spacing.xs))
         Row(horizontalArrangement = Arrangement.spacedBy(Spacing.md)) {
             SecondaryButton(
-                text = "Reset",
+                text = "Clear all",
                 onClick = { onApply(SearchFilters()) },
                 modifier = Modifier.weight(1f)
             )
             PrimaryButton(
-                text = "Apply",
+                text = "Show results",
                 onClick = {
                     val coversAll = priceRange.start <= 0f && priceRange.endInclusive >= maxRupees
                     onApply(
@@ -347,9 +379,49 @@ private fun FilterSheet(
                         )
                     )
                 },
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1.4f)
             )
         }
         Spacer(Modifier.height(Spacing.md))
+    }
+}
+
+@Composable
+private fun ActiveFilters(
+    filters: SearchFilters,
+    categories: List<com.example.shopp.model.CategoryModel>,
+    onChange: (SearchFilters) -> Unit
+) {
+    if (filters.activeCount == 0) return
+    androidx.compose.foundation.lazy.LazyRow(
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = Spacing.lg),
+        horizontalArrangement = Arrangement.spacedBy(Spacing.sm)
+    ) {
+        filters.categoryIds.forEach { id ->
+            item(key = "category-$id") {
+                ActiveFilterChip(
+                    label = categories.firstOrNull { it.id == id }?.name ?: id,
+                    onRemove = { onChange(filters.copy(categoryIds = filters.categoryIds - id)) }
+                )
+            }
+        }
+        if (filters.minPricePaise != null || filters.maxPricePaise != null) {
+            item(key = "price") {
+                val low = Money.format(filters.minPricePaise ?: 0L)
+                val label = if (filters.maxPricePaise != null) "$low - ${Money.format(filters.maxPricePaise)}" else "From $low"
+                ActiveFilterChip(
+                    label = label,
+                    onRemove = { onChange(filters.copy(minPricePaise = null, maxPricePaise = null)) }
+                )
+            }
+        }
+        if (filters.sort != SortOrder.Relevance) {
+            item(key = "sort") {
+                ActiveFilterChip(
+                    label = filters.sort.label,
+                    onRemove = { onChange(filters.copy(sort = SortOrder.Relevance)) }
+                )
+            }
+        }
     }
 }
