@@ -8,7 +8,9 @@ data class OrderLineModel(
     val title: String = "",
     val imageUrl: String = "",
     val unitPricePaise: Long = 0,
-    val quantity: Long = 0
+    val quantity: Long = 0,
+    /** Seller of the product at order time; blank for the original catalogue. */
+    val sellerId: String = ""
 )
 
 data class OrderModel(
@@ -26,5 +28,7 @@ data class OrderModel(
     val totalPaise: Long = 0,
     val paymentMethod: String = "",
     val paymentId: String = "",
-    val cancelledAt: Timestamp? = null
+    val cancelledAt: Timestamp? = null,
+    /** Distinct sellers whose products are in the order, so each seller can query their orders. */
+    val sellerIds: List<String> = emptyList()
 )

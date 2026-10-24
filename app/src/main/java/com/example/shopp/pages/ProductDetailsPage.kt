@@ -49,6 +49,9 @@ import com.example.shopp.components.LoadingView
 import com.example.shopp.components.ProductItemView
 import com.example.shopp.components.RatingSummaryLine
 import com.example.shopp.domain.discountPercent
+import com.example.shopp.domain.isAvailable
+import com.example.shopp.domain.lowStockLabel
+import com.example.shopp.domain.unavailableLabel
 import com.example.shopp.components.ReviewsSection
 import com.example.shopp.components.rememberAddToCart
 import com.example.shopp.model.ProductModel
@@ -226,13 +229,18 @@ private fun ProductDetailsContent(
         Spacer(modifier = Modifier.height(8.dp))
 
         // Add to Cart Primary Button
+        product.lowStockLabel?.let {
+            Text(text = it, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.secondary)
+            Spacer(modifier = Modifier.height(4.dp))
+        }
         Button(
             onClick = onAddToCart,
+            enabled = product.isAvailable,
             modifier = Modifier
                 .fillMaxWidth()
                 .height(50.dp)
         ) {
-            Text(text = "Add to Cart", fontSize = 16.sp)
+            Text(text = if (product.isAvailable) "Add to Cart" else product.unavailableLabel, fontSize = 16.sp)
         }
 
         Spacer(modifier = Modifier.height(16.dp))

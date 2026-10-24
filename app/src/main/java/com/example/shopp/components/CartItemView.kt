@@ -96,7 +96,10 @@ fun CartItemView(
                         modifier = Modifier.padding(horizontal = 8.dp)
                     )
 
-                    IconButton(onClick = onIncrement, enabled = product != null) {
+                    IconButton(
+                        onClick = onIncrement,
+                        enabled = product != null && (product.stock == null || line.quantity < product.stock)
+                    ) {
                         Icon(imageVector = Icons.Default.Add, contentDescription = "Increase quantity")
                     }
                 }

@@ -28,6 +28,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import com.example.shopp.domain.isAvailable
+import com.example.shopp.domain.lowStockLabel
+import com.example.shopp.domain.unavailableLabel
 import com.example.shopp.model.ProductModel
 
 @Composable
@@ -70,6 +73,18 @@ fun ProductItemView(
                 modifier = Modifier.padding(bottom = 8.dp)
             )
 
+            if (!product.isAvailable) {
+                Text(
+                    text = product.unavailableLabel,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.error
+                )
+            } else {
+                product.lowStockLabel?.let {
+                    Text(text = it, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.secondary)
+                }
+            }
+
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -95,7 +110,7 @@ fun ProductItemView(
                 Spacer(modifier = Modifier.weight(1f))
 
                 // Add to Cart Button
-                IconButton(onClick = onAddToCart) {
+                IconButton(onClick = onAddToCart, enabled = product.isAvailable) {
                     Icon(
                         imageVector = Icons.Default.ShoppingCart,
                         contentDescription = "Add to cart"

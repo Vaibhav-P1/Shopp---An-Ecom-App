@@ -62,6 +62,34 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // Seller-listed products. Sellers create, edit and delete only their own (`sellerId == uid`), and a
+    // product must keep a fixed shape. Any signed-in user may lower a product's stock, nothing else: that is
+    // how an order reserves units inside its transaction.
+    match /data/stock/products/{productId} {
+      function validProduct() {
+        let data = request.resource.data;
+        return data.keys().hasOnly(['sellerId', 'title', 'description', 'category', 'price', 'actualPrice', 'images', 'stock', 'active', 'otherDetails'])
+          && data.keys().hasAll(['sellerId', 'title', 'category', 'price', 'actualPrice', 'images', 'stock', 'active'])
+          && data.title is string && data.title.size() >= 3 && data.title.size() <= 80
+          && data.get('description', '') is string && data.get('description', '').size() <= 1000
+          && data.category is string && data.category.size() > 0
+          && data.price is string && data.price.matches('[0-9]+(\\.[0-9]{1,2})?')
+          && data.actualPrice is string && data.actualPrice.matches('[0-9]+(\\.[0-9]{1,2})?')
+          && data.images is list && data.images.size() >= 1 && data.images.size() <= 6
+          && data.stock is int && data.stock >= 0
+          && data.active is bool;
+      }
+
+      allow create: if isSeller() && request.resource.data.sellerId == request.auth.uid && validProduct();
+      allow update: if isSeller() && resource.data.get('sellerId', '') == request.auth.uid
+        && request.resource.data.sellerId == request.auth.uid && validProduct();
+      allow update: if signedIn()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['stock'])
+        && resource.data.stock is int && request.resource.data.stock is int
+        && request.resource.data.stock >= 0 && request.resource.data.stock < resource.data.stock;
+      allow delete: if isSeller() && resource.data.get('sellerId', '') == request.auth.uid;
+    }
+
     // Reviews: one per user per product (the document id is the author's uid), and only for buyers. The
     // review must point at one of the author's own delivered orders that contains the product.
     match /data/stock/products/{productId}/reviews/{uid} {
@@ -97,8 +125,15 @@ service cloud.firestore {
     // Orders: owners create and read their own orders; the only edit allowed is cancelling a fresh one.
     // `resource == null` lets order placement check whether an order id already exists (idempotency).
     match /orders/{orderId} {
-      allow read: if signedIn() && (resource == null || resource.data.userId == request.auth.uid);
+      allow read: if signedIn() && (resource == null || resource.data.userId == request.auth.uid
+        || request.auth.uid in resource.data.get('sellerIds', []));
       allow create: if signedIn() && request.resource.data.userId == request.auth.uid;
+      // A seller named on the order moves it one step forward: ORDERED -> PACKED -> SHIPPED -> DELIVERED
+      allow update: if signedIn() && request.auth.uid in resource.data.get('sellerIds', [])
+        && ((resource.data.status == 'ORDERED' && request.resource.data.status == 'PACKED')
+          || (resource.data.status == 'PACKED' && request.resource.data.status == 'SHIPPED')
+          || (resource.data.status == 'SHIPPED' && request.resource.data.status == 'DELIVERED'))
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'statusUpdatedAt']);
       // The only client-side change is cancelling an order that has not been packed yet
       allow update: if signedIn() && resource.data.userId == request.auth.uid
         && resource.data.status == 'ORDERED'

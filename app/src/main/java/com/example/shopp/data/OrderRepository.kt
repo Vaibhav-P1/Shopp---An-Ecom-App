@@ -11,6 +11,7 @@ import com.example.shopp.model.OrderStatus
 import com.example.shopp.model.ProductModel
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.DocumentReference
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.channels.awaitClose
@@ -67,18 +68,30 @@ class OrderRepository @Inject constructor(
                     it.toCoupon() ?: throw IllegalStateException("Invalid coupon code")
                 }
 
+                // Products whose stock is tracked: (reference, stock before, quantity ordered)
+                val stockUpdates = mutableListOf<Triple<DocumentReference, Long?, Long>>()
                 val lines = cart.map { (productId, quantity) ->
                     val snapshot = transaction.get(products.document(productId))
                     val product = snapshot.toObject(ProductModel::class.java)
                         ?: throw IllegalStateException("A product in your cart is no longer available")
                     val unitPrice = Money.parsePaise(product.actualPrice)
                         ?: throw IllegalStateException("${product.title} has no valid price")
+                    if (!product.active) throw IllegalStateException("${product.title} is no longer available")
+                    product.stock?.let { stock ->
+                        if (quantity > stock) {
+                            throw IllegalStateException(
+                                if (stock <= 0) "${product.title} is out of stock" else "Only $stock left of ${product.title}"
+                            )
+                        }
+                    }
+                    stockUpdates += Triple(snapshot.reference, product.stock, quantity)
                     OrderLineModel(
                         productId = productId,
                         title = product.title,
                         imageUrl = product.images.firstOrNull().orEmpty(),
                         unitPricePaise = unitPrice,
-                        quantity = quantity
+                        quantity = quantity,
+                        sellerId = product.sellerId
                     )
                 }
                 val subtotal = lines.sumOf { it.unitPricePaise * it.quantity }
@@ -103,12 +116,16 @@ class OrderRepository @Inject constructor(
                         subtotalPaise = breakdown.subtotalPaise,
                         discountPaise = breakdown.discountPaise,
                         couponCode = coupon?.code.orEmpty(),
+                        sellerIds = lines.map { it.sellerId }.filter { it.isNotBlank() }.distinct(),
                         taxPaise = breakdown.taxPaise,
                         totalPaise = breakdown.totalPaise,
                         paymentMethod = paymentMethod.name,
                         paymentId = paymentId.orEmpty()
                     )
                 )
+                stockUpdates.forEach { (ref, stock, quantity) ->
+                    if (stock != null) transaction.update(ref, "stock", stock - quantity)
+                }
                 transaction.update(userRef, "cartItems", FieldValue.delete())
                 Unit
             }.await()

@@ -13,6 +13,7 @@ import com.example.shopp.domain.Coupon
 import com.example.shopp.domain.CouponResult
 import com.example.shopp.domain.CouponRules
 import com.example.shopp.domain.Money
+import com.example.shopp.domain.isAvailable
 import com.example.shopp.domain.PriceBreakdown
 import com.example.shopp.domain.PriceCalculator
 import com.example.shopp.payment.PaymentResult
@@ -36,14 +37,16 @@ data class CheckoutLine(
     val productId: String,
     val title: String,
     val unitPricePaise: Long?,
-    val quantity: Long
+    val quantity: Long,
+    /** False when the product was hidden, sold out, or has fewer units than requested. */
+    val available: Boolean = true
 )
 
 data class CheckoutData(
     val lines: List<CheckoutLine>,
     val subtotalPaise: Long
 ) {
-    val hasUnavailableItems: Boolean get() = lines.any { it.unitPricePaise == null }
+    val hasUnavailableItems: Boolean get() = lines.any { it.unitPricePaise == null || !it.available }
     val hasOrderableItems: Boolean get() = lines.isNotEmpty() && !hasUnavailableItems
 }
 
@@ -206,7 +209,8 @@ class CheckoutViewModel @Inject constructor(
                         productId = productId,
                         title = product?.title ?: "Product no longer available",
                         unitPricePaise = product?.let { Money.parsePaise(it.actualPrice) },
-                        quantity = quantity
+                        quantity = quantity,
+                        available = product != null && product.isAvailable && (product.stock == null || quantity <= product.stock)
                     )
                 }.sortedBy { it.title }
 

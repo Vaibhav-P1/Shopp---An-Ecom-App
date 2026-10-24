@@ -41,7 +41,7 @@ class ProductRepository @Inject constructor(
 
         val documents = query.get().await().documents
         ProductPage(
-            items = documents.mapNotNull { it.toProduct() },
+            items = documents.mapNotNull { it.toProduct() }.filter { it.active },
             // A full page may still be the last one; the next request then returns an empty page
             nextCursor = if (documents.size < pageSize) null else documents.lastOrNull()?.let(::PageCursor)
         )
@@ -61,6 +61,7 @@ class ProductRepository @Inject constructor(
     suspend fun getAllProducts(forceRefresh: Boolean = false): Result<List<ProductModel>> = firestoreCall {
         catalogueCache.takeIf { !forceRefresh } ?: products.get().await().documents
             .mapNotNull { it.toProduct() }
+            .filter { it.active }
             .also { catalogueCache = it }
     }
 
