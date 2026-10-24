@@ -51,6 +51,7 @@ import com.example.shopp.viewmodel.UiState
 fun ProfilePage(
     modifier: Modifier = Modifier,
     onOrdersClick: () -> Unit,
+    onAddressesClick: () -> Unit,
     onSellerClick: () -> Unit,
     onSignedOut: () -> Unit,
     viewModel: ProfileViewModel = hiltViewModel()
@@ -72,8 +73,8 @@ fun ProfilePage(
         is UiState.Error -> ErrorView(state.message, onRetry = viewModel::retry, modifier = modifier)
         is UiState.Success -> ProfileContent(
             data = state.data,
-            onSaveAddress = viewModel::saveAddress,
             onOrdersClick = onOrdersClick,
+            onAddressesClick = onAddressesClick,
             onSellerClick = onSellerClick,
             onSignOut = viewModel::signOut,
             modifier = modifier
@@ -84,14 +85,12 @@ fun ProfilePage(
 @Composable
 private fun ProfileContent(
     data: ProfileData,
-    onSaveAddress: (String) -> Unit,
     onOrdersClick: () -> Unit,
+    onAddressesClick: () -> Unit,
     onSellerClick: () -> Unit,
     onSignOut: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    var addressInput by remember(data.user.address) { mutableStateOf(data.user.address) }
-
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -126,27 +125,6 @@ private fun ProfileContent(
 
         Spacer(modifier = Modifier.height(20.dp))
 
-        OutlinedTextField(
-            value = addressInput,
-            onValueChange = { addressInput = it },
-            modifier = Modifier.fillMaxWidth(),
-            label = { Text("Enter delivery address") },
-            placeholder = { Text("House No, Street, City, State") },
-            trailingIcon = {
-                IconButton(onClick = { onSaveAddress(addressInput) }) {
-                    Icon(
-                        imageVector = Icons.Default.Check,
-                        contentDescription = "Save Address"
-                    )
-                }
-            },
-            singleLine = false,
-            minLines = 2,
-            keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Done),
-            keyboardActions = KeyboardActions(onDone = { onSaveAddress(addressInput) })
-        )
-        Spacer(modifier = Modifier.height(20.dp))
-
         Text(text = "Email:", fontSize = 18.sp, fontWeight = FontWeight.Medium)
         Text(text = data.user.email, fontSize = 16.sp)
 
@@ -169,6 +147,27 @@ private fun ProfileContent(
             ) {
                 Text(
                     text = "My Orders",
+                    fontWeight = FontWeight.SemiBold
+                )
+
+                Text(">")
+            }
+        }
+
+        Spacer(modifier = Modifier.height(Spacing.md))
+
+        ShoppCard(
+            onClick = onAddressesClick,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = "Saved Addresses",
                     fontWeight = FontWeight.SemiBold
                 )
 

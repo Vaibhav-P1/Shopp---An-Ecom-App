@@ -2,11 +2,12 @@ package com.example.shopp.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.shopp.data.AddressRepository
 import com.example.shopp.data.CartRepository
 import com.example.shopp.data.OrderRepository
 import com.example.shopp.data.PaymentMethod
 import com.example.shopp.data.ProductRepository
-import com.example.shopp.data.UserRepository
+import com.example.shopp.model.AddressModel
 import com.example.shopp.domain.Money
 import com.example.shopp.domain.PriceBreakdown
 import com.example.shopp.domain.PriceCalculator
@@ -17,6 +18,9 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -32,20 +36,22 @@ data class CheckoutLine(
 )
 
 data class CheckoutData(
-    val name: String,
-    val address: String,
     val lines: List<CheckoutLine>,
     val breakdown: PriceBreakdown
 ) {
     val hasUnavailableItems: Boolean get() = lines.any { it.unitPricePaise == null }
-    val canOrder: Boolean get() = lines.isNotEmpty() && !hasUnavailableItems && address.isNotBlank()
+    val hasOrderableItems: Boolean get() = lines.isNotEmpty() && !hasUnavailableItems
 }
 
 data class CheckoutUiState(
     val content: UiState<CheckoutData> = UiState.Loading,
     val paymentMethod: PaymentMethod = PaymentMethod.COD,
-    val isPlacing: Boolean = false
-)
+    val isPlacing: Boolean = false,
+    /** The primary saved address, which the order is delivered to; null when the user has none. */
+    val address: AddressModel? = null
+) {
+    val canOrder: Boolean get() = (content as? UiState.Success)?.data?.hasOrderableItems == true && address != null
+}
 
 sealed interface CheckoutEvent {
     data class StartPayment(val amountPaise: Long, val orderId: String) : CheckoutEvent
@@ -57,7 +63,7 @@ sealed interface CheckoutEvent {
 class CheckoutViewModel @Inject constructor(
     private val cartRepository: CartRepository,
     private val productRepository: ProductRepository,
-    private val userRepository: UserRepository,
+    private val addressRepository: AddressRepository,
     private val orderRepository: OrderRepository,
     private val paymentResultBus: PaymentResultBus
 ) : ViewModel() {
@@ -76,13 +82,15 @@ class CheckoutViewModel @Inject constructor(
 
     init {
         load()
+        observeAddress()
         viewModelScope.launch {
             paymentResultBus.results.collect { result ->
                 if (!_uiState.value.isPlacing) return@collect
                 when (result) {
                     is PaymentResult.Success -> {
                         paidPaymentId = result.paymentId
-                        submit(PaymentMethod.ONLINE, result.paymentId)
+                        _uiState.value.address?.let { submit(it, PaymentMethod.ONLINE, result.paymentId) }
+                            ?: _uiState.update { it.copy(isPlacing = false) }
                     }
                     is PaymentResult.Failure -> {
                         _uiState.update { it.copy(isPlacing = false) }
@@ -105,22 +113,23 @@ class CheckoutViewModel @Inject constructor(
     fun placeOrder() {
         val state = _uiState.value
         val data = (state.content as? UiState.Success)?.data ?: return
-        if (state.isPlacing || !data.canOrder) return
+        val address = state.address ?: return
+        if (state.isPlacing || !state.canOrder) return
 
         _uiState.update { it.copy(isPlacing = true) }
         val alreadyPaid = paidPaymentId
         when {
-            alreadyPaid != null -> submit(PaymentMethod.ONLINE, alreadyPaid)
-            state.paymentMethod == PaymentMethod.COD -> submit(PaymentMethod.COD, null)
+            alreadyPaid != null -> submit(address, PaymentMethod.ONLINE, alreadyPaid)
+            state.paymentMethod == PaymentMethod.COD -> submit(address, PaymentMethod.COD, null)
             else -> viewModelScope.launch {
                 _events.send(CheckoutEvent.StartPayment(data.breakdown.totalPaise, orderId))
             }
         }
     }
 
-    private fun submit(method: PaymentMethod, paymentId: String?) {
+    private fun submit(address: AddressModel, method: PaymentMethod, paymentId: String?) {
         viewModelScope.launch {
-            orderRepository.placeOrder(orderId, method, paymentId).fold(
+            orderRepository.placeOrder(orderId, address.id, method, paymentId).fold(
                 onSuccess = { _events.send(CheckoutEvent.OrderPlaced(orderId)) },
                 onFailure = {
                     _uiState.update { state -> state.copy(isPlacing = false) }
@@ -130,10 +139,20 @@ class CheckoutViewModel @Inject constructor(
         }
     }
 
+    /** Follows the address book, so returning from "Change" shows the new primary address. */
+    private fun observeAddress() {
+        addressRepository.observeAddresses()
+            .onEach { list ->
+                val primary = list.firstOrNull { it.primary } ?: list.firstOrNull()
+                _uiState.update { it.copy(address = primary) }
+            }
+            .catch { }
+            .launchIn(viewModelScope)
+    }
+
     private fun load() {
         viewModelScope.launch {
             val result = runCatching {
-                val profile = userRepository.getProfile().getOrThrow()
                 val cart = cartRepository.getCart().getOrThrow()
                 val products = productRepository.getProductsByIds(cart.keys).getOrThrow().associateBy { it.id }
 
@@ -148,7 +167,7 @@ class CheckoutViewModel @Inject constructor(
                 }.sortedBy { it.title }
 
                 val subtotal = lines.sumOf { (it.unitPricePaise ?: 0L) * it.quantity }
-                CheckoutData(profile.name, profile.address, lines, PriceCalculator.calculate(subtotal))
+                CheckoutData(lines, PriceCalculator.calculate(subtotal))
             }
             _uiState.update {
                 it.copy(

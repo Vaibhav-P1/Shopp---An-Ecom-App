@@ -7,6 +7,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.example.shopp.pages.AddressBookPage
 import com.example.shopp.pages.CategoryProductsPage
 import com.example.shopp.pages.CheckoutPage
 import com.example.shopp.pages.OrderDetailsPage
@@ -54,11 +55,16 @@ fun AppNavigation(isLoggedIn: Boolean) {
                 onOrdersClick = { navController.navigate(Orders) },
                 onSellerClick = { navController.navigate(Seller) },
                 onSearchClick = { navController.navigate(Search) },
+                onAddressesClick = { navController.navigate(AddressBook) },
                 onSignedOut = {
                     // Clear the whole back stack so Back can't return into the signed-out app
                     navController.navigate(Auth) { popUpTo(0) { inclusive = true } }
                 }
             )
+        }
+
+        composable<AddressBook> {
+            AddressBookPage(modifier = insets)
         }
 
         composable<Search> {
@@ -86,7 +92,8 @@ fun AppNavigation(isLoggedIn: Boolean) {
                 onOrderPlaced = {
                     // Wipe the back stack so Back can't return to checkout
                     navController.navigate(Home) { popUpTo(0) { inclusive = true } }
-                }
+                },
+                onManageAddresses = { navController.navigate(AddressBook) }
             )
         }
 

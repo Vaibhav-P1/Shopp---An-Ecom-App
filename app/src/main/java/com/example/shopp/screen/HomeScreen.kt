@@ -51,6 +51,7 @@ fun HomeScreen(
     onOrdersClick: () -> Unit,
     onSellerClick: () -> Unit,
     onSearchClick: () -> Unit,
+    onAddressesClick: () -> Unit,
     onSignedOut: () -> Unit
 ){
 
@@ -129,6 +130,7 @@ fun HomeScreen(
                     onOrdersClick = onOrdersClick,
                     onSellerClick = onSellerClick,
                     onSearchClick = onSearchClick,
+                    onAddressesClick = onAddressesClick,
                     onSignedOut = onSignedOut
                 )
             }
@@ -148,6 +150,7 @@ fun ContentScreen(
     onOrdersClick: () -> Unit,
     onSellerClick: () -> Unit,
     onSearchClick: () -> Unit,
+    onAddressesClick: () -> Unit,
     onSignedOut: () -> Unit
 ) {
     when (selectedIndex) {
@@ -157,6 +160,7 @@ fun ContentScreen(
         3-> ProfilePage(
             modifier = modifier,
             onOrdersClick = onOrdersClick,
+            onAddressesClick = onAddressesClick,
             onSellerClick = onSellerClick,
             onSignedOut = onSignedOut
         )

@@ -40,6 +40,7 @@ import com.example.shopp.components.ErrorView
 import com.example.shopp.components.LoadingView
 import com.example.shopp.data.PaymentMethod
 import com.example.shopp.domain.Money
+import com.example.shopp.model.AddressModel
 import com.example.shopp.payment.PaymentLauncher
 import com.example.shopp.payment.findActivity
 import com.example.shopp.viewmodel.CheckoutData
@@ -51,6 +52,7 @@ import com.example.shopp.viewmodel.UiState
 fun CheckoutPage(
     modifier: Modifier = Modifier,
     onOrderPlaced: () -> Unit,
+    onManageAddresses: () -> Unit,
     viewModel: CheckoutViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -88,6 +90,9 @@ fun CheckoutPage(
         is UiState.Error -> ErrorView(content.message, onRetry = viewModel::retry, modifier = modifier)
         is UiState.Success -> CheckoutContent(
             data = content.data,
+            address = uiState.address,
+            canOrder = uiState.canOrder,
+            onManageAddresses = onManageAddresses,
             paymentMethod = uiState.paymentMethod,
             isPlacing = uiState.isPlacing,
             onPaymentMethodSelected = viewModel::selectPaymentMethod,
@@ -100,6 +105,9 @@ fun CheckoutPage(
 @Composable
 private fun CheckoutContent(
     data: CheckoutData,
+    address: AddressModel?,
+    canOrder: Boolean,
+    onManageAddresses: () -> Unit,
     paymentMethod: PaymentMethod,
     isPlacing: Boolean,
     onPaymentMethodSelected: (PaymentMethod) -> Unit,
@@ -124,9 +132,14 @@ private fun CheckoutContent(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            Text(text = "Deliver to :", fontWeight = FontWeight.SemiBold)
-            Text(text = data.name)
-            Text(text = data.address)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(text = "Deliver to", fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+                TextButton(onClick = onManageAddresses) { Text(if (address == null) "Add address" else "Change") }
+            }
+            if (address != null) {
+                Text(text = address.label, fontWeight = FontWeight.Medium)
+                Text(text = address.formatted)
+            }
             Spacer(modifier = Modifier.height(16.dp))
             HorizontalDivider()
             Spacer(modifier = Modifier.height(16.dp))
@@ -196,7 +209,7 @@ private fun CheckoutContent(
 
         val problem = when {
             data.lines.isEmpty() -> null
-            data.address.isBlank() -> "Add a delivery address in your profile to place an order"
+            address == null -> "Add a delivery address to place an order"
             data.hasUnavailableItems -> "Remove unavailable items from your cart to continue"
             else -> null
         }
@@ -212,7 +225,7 @@ private fun CheckoutContent(
 
         Button(
             onClick = onPlaceOrder,
-            enabled = data.canOrder && !isPlacing,
+            enabled = canOrder && !isPlacing,
             modifier = Modifier
                 .fillMaxWidth()
                 .height(50.dp)

@@ -47,22 +47,6 @@ class ProfileViewModel @Inject constructor(
         load()
     }
 
-    fun saveAddress(address: String) {
-        if (address.isBlank()) {
-            send(ProfileEvent.Message("Address can't be empty"))
-            return
-        }
-        viewModelScope.launch {
-            userRepository.updateAddress(address).fold(
-                onSuccess = {
-                    updateData { data -> data.copy(user = data.user.copy(address = address.trim())) }
-                    send(ProfileEvent.Message("Address updated successfully"))
-                },
-                onFailure = { send(ProfileEvent.Message(it.localizedMessage ?: "Could not update the address")) }
-            )
-        }
-    }
-
     fun signOut() {
         authRepository.signOut()
         send(ProfileEvent.SignedOut)

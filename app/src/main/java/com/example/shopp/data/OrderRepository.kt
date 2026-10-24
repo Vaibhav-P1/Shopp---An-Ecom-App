@@ -2,6 +2,7 @@ package com.example.shopp.data
 
 import com.example.shopp.domain.Money
 import com.example.shopp.domain.PriceCalculator
+import com.example.shopp.model.AddressModel
 import com.example.shopp.model.OrderLineModel
 import com.example.shopp.model.OrderModel
 import com.example.shopp.model.ProductModel
@@ -26,11 +27,16 @@ class OrderRepository @Inject constructor(
 
     /**
      * Places the order for everything currently in the user's cart, atomically:
-     * prices are re-read from the catalogue, the order is written with a snapshot of each line,
-     * and the cart is cleared. Calling it again with the same [orderId] is a no-op, so a duplicated
-     * payment callback or a double tap can never create a second order.
+     * prices are re-read from the catalogue, the order is written with a snapshot of each line and of the
+     * saved address named by [addressId], and the cart is cleared. Calling it again with the same [orderId]
+     * is a no-op, so a duplicated payment callback or a double tap can never create a second order.
      */
-    suspend fun placeOrder(orderId: String, paymentMethod: PaymentMethod, paymentId: String?): Result<Unit> =
+    suspend fun placeOrder(
+        orderId: String,
+        addressId: String,
+        paymentMethod: PaymentMethod,
+        paymentId: String?
+    ): Result<Unit> =
         firestoreCall {
             val uid = auth.currentUser?.uid ?: throw IllegalStateException("Please sign in first")
             val userRef = firestore.collection("users").document(uid)
@@ -45,8 +51,9 @@ class OrderRepository @Inject constructor(
                 val cart = parseQuantities(user.get("cartItems"))
                 if (cart.isEmpty()) throw IllegalStateException("Your cart is empty")
 
-                val address = user.getString("address").orEmpty()
-                if (address.isBlank()) throw IllegalStateException("Add a delivery address before placing an order")
+                val address = transaction.get(userRef.collection("addresses").document(addressId))
+                    .toObject(AddressModel::class.java)
+                    ?: throw IllegalStateException("Choose a delivery address before placing an order")
 
                 val lines = cart.map { (productId, quantity) ->
                     val snapshot = transaction.get(products.document(productId))
@@ -72,7 +79,7 @@ class OrderRepository @Inject constructor(
                         userId = uid,
                         items = cart,
                         status = "ORDERED",
-                        address = address,
+                        address = address.formatted,
                         lines = lines,
                         subtotalPaise = breakdown.subtotalPaise,
                         discountPaise = breakdown.discountPaise,
