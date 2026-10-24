@@ -77,7 +77,7 @@ private fun ProductGrid(
     }
 
     LazyVerticalGrid(
-        columns = GridCells.Fixed(2),
+        columns = GridCells.Adaptive(minSize = 170.dp),
         state = gridState,
         modifier = modifier
             .fillMaxSize()

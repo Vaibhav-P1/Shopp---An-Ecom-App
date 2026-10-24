@@ -5,6 +5,8 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
@@ -18,6 +20,9 @@ import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
+import androidx.compose.material3.NavigationRail
+import androidx.compose.material3.NavigationRailItem
+import androidx.compose.material3.NavigationRailItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -27,6 +32,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.shopp.pages.CartPage
@@ -64,46 +70,71 @@ fun HomeScreen(
     val cartState by cartViewModel.uiState.collectAsStateWithLifecycle()
     val cartCount = (cartState as? UiState.Success)?.data?.sumOf { it.quantity.toInt() } ?: 0
 
+    // Phones get a bottom bar, tablets and landscape get a rail on the side
+    val isWide = LocalConfiguration.current.screenWidthDp >= WIDE_LAYOUT_MIN_WIDTH_DP
+
+    val tabColors = NavigationBarItemDefaults.colors(
+        indicatorColor = MaterialTheme.colorScheme.primaryContainer,
+        selectedIconColor = MaterialTheme.colorScheme.onPrimaryContainer
+    )
+    val tabIcon: @Composable (NavItem) -> Unit = { navItem ->
+        if (navItem.showsCartCount) {
+            CartIcon(navItem, cartCount)
+        } else {
+            Icon(imageVector = navItem.icon, contentDescription = navItem.label)
+        }
+    }
+
     Scaffold(
         bottomBar = {
-            NavigationBar {
-                navItemList.forEachIndexed { index, navItem ->
-                    NavigationBarItem(
-                        selected = index == selectedIndex,
-                        onClick = { selectedIndex = index },
-                        colors = NavigationBarItemDefaults.colors(
-                            indicatorColor = MaterialTheme.colorScheme.primaryContainer,
-                            selectedIconColor = MaterialTheme.colorScheme.onPrimaryContainer
-                        ),
-                        icon = {
-                            if (navItem.showsCartCount) {
-                                CartIcon(navItem, cartCount)
-                            } else {
-                                Icon(imageVector = navItem.icon, contentDescription = navItem.label)
-                            }
-                        },
-                        label = {
-                            Text(text = navItem.label)
-                        }
-                    )
+            if (!isWide) {
+                NavigationBar {
+                    navItemList.forEachIndexed { index, navItem ->
+                        NavigationBarItem(
+                            selected = index == selectedIndex,
+                            onClick = { selectedIndex = index },
+                            colors = tabColors,
+                            icon = { tabIcon(navItem) },
+                            label = { Text(text = navItem.label) }
+                        )
+                    }
                 }
             }
         }
-    ) {
-        Crossfade(targetState = selectedIndex, label = "tabs") { tab ->
-            ContentScreen(
-                modifier = Modifier.padding(it),
-                selectedIndex = tab,
-                onCategoryClick = onCategoryClick,
-                onProductClick = onProductClick,
-                onCheckout = onCheckout,
-                onOrdersClick = onOrdersClick,
-                onSellerClick = onSellerClick,
-                onSignedOut = onSignedOut
-            )
+    ) { innerPadding ->
+        Row(Modifier.padding(innerPadding)) {
+            if (isWide) {
+                NavigationRail(windowInsets = WindowInsets(0)) {
+                    navItemList.forEachIndexed { index, navItem ->
+                        NavigationRailItem(
+                            selected = index == selectedIndex,
+                            onClick = { selectedIndex = index },
+                            colors = NavigationRailItemDefaults.colors(
+                                indicatorColor = MaterialTheme.colorScheme.primaryContainer,
+                                selectedIconColor = MaterialTheme.colorScheme.onPrimaryContainer
+                            ),
+                            icon = { tabIcon(navItem) },
+                            label = { Text(text = navItem.label) }
+                        )
+                    }
+                }
+            }
+            Crossfade(targetState = selectedIndex, label = "tabs") { tab ->
+                ContentScreen(
+                    selectedIndex = tab,
+                    onCategoryClick = onCategoryClick,
+                    onProductClick = onProductClick,
+                    onCheckout = onCheckout,
+                    onOrdersClick = onOrdersClick,
+                    onSellerClick = onSellerClick,
+                    onSignedOut = onSignedOut
+                )
+            }
         }
     }
 }
+
+private const val WIDE_LAYOUT_MIN_WIDTH_DP = 600
 
 @Composable
 fun ContentScreen(

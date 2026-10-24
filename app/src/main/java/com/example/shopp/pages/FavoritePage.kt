@@ -2,13 +2,13 @@ package com.example.shopp.pages
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material3.Text
@@ -55,25 +55,17 @@ fun FavoritePage(
             is UiState.Success -> if (state.data.isEmpty()) {
                 EmptyView("No items in favorites", icon = Icons.Outlined.FavoriteBorder)
             } else {
-                LazyColumn(
+                LazyVerticalGrid(
+                    columns = GridCells.Adaptive(minSize = 170.dp),
                     modifier = Modifier.fillMaxSize(),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    items(state.data.chunked(2), key = { row -> row.first().id }) { rowItems ->
-                        Row {
-                            rowItems.forEach {
-                                ProductItemView(
-                                    product = it,
-                                    onClick = { onProductClick(it.id) },
-                                    onAddToCart = { addToCart(it.id) },
-                                    modifier = Modifier.weight(1f)
-                                )
-                            }
-                            // A row with a single product gets an empty spacer to keep the column width
-                            if (rowItems.size == 1) {
-                                Spacer(modifier = Modifier.weight(1f))
-                            }
-                        }
+                    items(state.data, key = { it.id }) { product ->
+                        ProductItemView(
+                            product = product,
+                            onClick = { onProductClick(product.id) },
+                            onAddToCart = { addToCart(product.id) }
+                        )
                     }
                 }
             }
