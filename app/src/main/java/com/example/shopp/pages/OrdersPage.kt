@@ -8,6 +8,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Receipt
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -19,7 +21,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.shopp.components.EmptyView
 import com.example.shopp.components.ErrorView
-import com.example.shopp.components.LoadingView
+import com.example.shopp.components.ListSkeleton
 import com.example.shopp.components.OrderView
 import com.example.shopp.viewmodel.OrdersViewModel
 import com.example.shopp.viewmodel.UiState
@@ -46,10 +48,10 @@ fun OrdersPage(
         Spacer(modifier = Modifier.height(16.dp))
 
         when (val state = uiState) {
-            UiState.Loading -> LoadingView()
+            UiState.Loading -> ListSkeleton()
             is UiState.Error -> ErrorView(state.message, onRetry = viewModel::retry)
             is UiState.Success -> if (state.data.isEmpty()) {
-                EmptyView("You haven't placed any orders yet")
+                EmptyView("You haven't placed any orders yet", icon = Icons.Outlined.Receipt)
             } else {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),

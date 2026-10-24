@@ -9,6 +9,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -20,7 +22,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.shopp.components.EmptyView
 import com.example.shopp.components.ErrorView
-import com.example.shopp.components.LoadingView
+import com.example.shopp.components.ProductGridSkeleton
 import com.example.shopp.components.ProductItemView
 import com.example.shopp.components.rememberAddToCart
 import com.example.shopp.viewmodel.FavoritesViewModel
@@ -48,10 +50,10 @@ fun FavoritePage(
         Spacer(modifier = Modifier.height(16.dp))
 
         when (val state = uiState) {
-            UiState.Loading -> LoadingView()
+            UiState.Loading -> ProductGridSkeleton()
             is UiState.Error -> ErrorView(state.message, onRetry = viewModel::retry)
             is UiState.Success -> if (state.data.isEmpty()) {
-                EmptyView("No items in favorites")
+                EmptyView("No items in favorites", icon = Icons.Outlined.FavoriteBorder)
             } else {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),

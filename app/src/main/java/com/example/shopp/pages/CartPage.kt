@@ -7,6 +7,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.ShoppingCart
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -23,7 +25,7 @@ import com.example.shopp.ui.showToast
 import com.example.shopp.components.CartItemView
 import com.example.shopp.components.EmptyView
 import com.example.shopp.components.ErrorView
-import com.example.shopp.components.LoadingView
+import com.example.shopp.components.ListSkeleton
 import com.example.shopp.viewmodel.CartViewModel
 import com.example.shopp.viewmodel.UiState
 
@@ -53,10 +55,10 @@ fun CartPage(
         )
 
         when (val state = uiState) {
-            UiState.Loading -> LoadingView()
+            UiState.Loading -> ListSkeleton()
             is UiState.Error -> ErrorView(state.message, onRetry = viewModel::retry)
             is UiState.Success -> if (state.data.isEmpty()) {
-                EmptyView("No items in cart")
+                EmptyView("No items in cart", icon = Icons.Outlined.ShoppingCart)
             } else {
                 LazyColumn(modifier = Modifier.weight(1f)) {
                     items(state.data, key = { it.productId }) { line ->

@@ -22,7 +22,7 @@ import com.example.shopp.components.BannerView
 import com.example.shopp.components.CategoriesView
 import com.example.shopp.components.ErrorView
 import com.example.shopp.components.HeaderView
-import com.example.shopp.components.LoadingView
+import com.example.shopp.components.HomeSkeleton
 import com.example.shopp.components.OfferCard
 import com.example.shopp.viewmodel.HomeUiState
 import com.example.shopp.viewmodel.HomeViewModel
@@ -37,7 +37,7 @@ fun HomePage(
     val isRefreshing by homeViewModel.isRefreshing.collectAsStateWithLifecycle()
 
     when (val state = uiState) {
-        HomeUiState.Loading -> LoadingView(modifier)
+        HomeUiState.Loading -> HomeSkeleton(modifier)
 
         is HomeUiState.Error -> ErrorView(state.message, onRetry = homeViewModel::retry, modifier = modifier)
 

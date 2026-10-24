@@ -24,7 +24,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.shopp.components.EmptyView
 import com.example.shopp.components.ErrorView
-import com.example.shopp.components.LoadingView
+import com.example.shopp.components.ProductGridSkeleton
 import com.example.shopp.components.ProductItemView
 import com.example.shopp.components.rememberAddToCart
 import com.example.shopp.viewmodel.CategoryProductsContent
@@ -43,7 +43,7 @@ fun CategoryProductsPage(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     when (val state = uiState) {
-        UiState.Loading -> LoadingView(modifier)
+        UiState.Loading -> ProductGridSkeleton(modifier)
         is UiState.Error -> ErrorView(state.message, onRetry = viewModel::retry, modifier = modifier)
         is UiState.Success -> if (state.data.products.isEmpty()) {
             EmptyView("No products in this category yet", modifier)
