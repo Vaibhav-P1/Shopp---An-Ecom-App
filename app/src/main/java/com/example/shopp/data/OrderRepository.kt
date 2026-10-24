@@ -156,6 +156,42 @@ class OrderRepository @Inject constructor(
         awaitClose { registration.remove() }
     }
 
+    /** Live list of orders that contain the signed-in seller's products, newest first. */
+    fun observeSellerOrders(): Flow<List<OrderModel>> = callbackFlow {
+        val uid = auth.currentUser?.uid
+        if (uid == null) {
+            trySend(emptyList())
+            awaitClose { }
+            return@callbackFlow
+        }
+        val registration = firestore.collection("orders")
+            .whereArrayContains("sellerIds", uid)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    close(error)
+                    return@addSnapshotListener
+                }
+                val orders = snapshot?.documents
+                    ?.mapNotNull { it.toObject(OrderModel::class.java) }
+                    ?.sortedByDescending { it.date }
+                    .orEmpty()
+                trySend(orders)
+            }
+        awaitClose { registration.remove() }
+    }
+
+    /** Moves an order one step forward (Placed -> Packed -> Shipped -> Delivered). Firestore rules allow it for sellers only. */
+    suspend fun advanceStatus(orderId: String): Result<Unit> = firestoreCall {
+        val orderRef = firestore.collection("orders").document(orderId)
+        firestore.runTransaction { transaction ->
+            val current = transaction.get(orderRef).getString("status").orEmpty()
+            val next = OrderStatus.next(current) ?: throw IllegalStateException("This order can no longer be updated")
+            transaction.update(orderRef, mapOf("status" to next, "statusUpdatedAt" to Timestamp.now()))
+            Unit
+        }.await()
+        Unit
+    }
+
     /** Live view of one order, so status changes made elsewhere show up while the screen is open. */
     fun observeOrder(orderId: String): Flow<OrderModel> = callbackFlow {
         val registration = firestore.collection("orders").document(orderId)

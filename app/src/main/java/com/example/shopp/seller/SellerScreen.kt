@@ -15,6 +15,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.outlined.Dashboard
 import androidx.compose.material.icons.outlined.Inventory2
+import androidx.compose.material.icons.outlined.Receipt
 import androidx.compose.material.icons.outlined.Storefront
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -45,6 +46,7 @@ import com.example.shopp.components.ShoppTextField
 import com.example.shopp.model.SellerModel
 import com.example.shopp.ui.showToast
 import com.example.shopp.ui.theme.Spacing
+import com.example.shopp.viewmodel.SellerOrdersViewModel
 import com.example.shopp.viewmodel.SellerProductEvent
 import com.example.shopp.viewmodel.SellerProductsViewModel
 import com.example.shopp.viewmodel.SellerSessionViewModel
@@ -84,7 +86,8 @@ fun SellerScreen(
 
 private enum class SellerTab(val label: String, val icon: ImageVector) {
     Dashboard("Dashboard", Icons.Outlined.Dashboard),
-    Products("Products", Icons.Outlined.Inventory2)
+    Products("Products", Icons.Outlined.Inventory2),
+    Orders("Orders", Icons.Outlined.Receipt)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -93,10 +96,13 @@ private fun SellerShell(
     seller: SellerModel,
     onExit: () -> Unit,
     modifier: Modifier = Modifier,
-    productsViewModel: SellerProductsViewModel = hiltViewModel()
+    productsViewModel: SellerProductsViewModel = hiltViewModel(),
+    ordersViewModel: SellerOrdersViewModel = hiltViewModel()
 ) {
     var tab by rememberSaveable { mutableStateOf(SellerTab.Dashboard) }
     val products by productsViewModel.products.collectAsStateWithLifecycle()
+    val orders by ordersViewModel.orders.collectAsStateWithLifecycle()
+    val updating by ordersViewModel.updating.collectAsStateWithLifecycle()
     val categories by productsViewModel.categories.collectAsStateWithLifecycle()
     val editor by productsViewModel.editor.collectAsStateWithLifecycle()
     val context = LocalContext.current
@@ -108,6 +114,9 @@ private fun SellerShell(
                 SellerProductEvent.Saved -> context.showToast("Product saved")
             }
         }
+    }
+    LaunchedEffect(ordersViewModel) {
+        ordersViewModel.messages.collect { context.showToast(it) }
     }
     BackHandler(enabled = editor != null, onBack = productsViewModel::closeEditor)
 
@@ -161,9 +170,21 @@ private fun SellerShell(
                 onSave = productsViewModel::save,
                 modifier = content
             )
-            tab == SellerTab.Dashboard -> Column(content.padding(Spacing.lg)) {
-                Text("Welcome, ${seller.shopName}", style = MaterialTheme.typography.titleLarge)
-            }
+            tab == SellerTab.Dashboard -> SellerDashboard(
+                shopName = seller.shopName,
+                sellerId = ordersViewModel.sellerId,
+                orders = orders,
+                products = products,
+                modifier = content
+            )
+            tab == SellerTab.Orders -> SellerOrdersPage(
+                state = orders,
+                sellerId = ordersViewModel.sellerId,
+                updating = updating,
+                onRetry = ordersViewModel::retry,
+                onAdvance = ordersViewModel::advance,
+                modifier = content
+            )
             tab == SellerTab.Products -> SellerProductsPage(
                 state = products,
                 onRetry = productsViewModel::retry,
