@@ -11,15 +11,18 @@ data class PriceBreakdown(
 /** The single place where order totals are computed, shared by the checkout screen and order placement. */
 object PriceCalculator {
 
-    // Rates are in basis points (1% = 100 bps). Coupons replace the flat discount in Phase B.
-    private const val DISCOUNT_BPS = 1_000L
+    // Rates are in basis points (1% = 100 bps)
     private const val TAX_BPS = 1_300L
 
-    fun calculate(subtotalPaise: Long): PriceBreakdown = PriceBreakdown(
-        subtotalPaise = subtotalPaise,
-        discountPaise = percentOf(subtotalPaise, DISCOUNT_BPS),
-        taxPaise = percentOf(subtotalPaise, TAX_BPS)
-    )
+    /** Tax is charged on the price after [discountPaise], which is capped at the subtotal. */
+    fun calculate(subtotalPaise: Long, discountPaise: Long = 0): PriceBreakdown {
+        val discount = discountPaise.coerceIn(0, subtotalPaise)
+        return PriceBreakdown(
+            subtotalPaise = subtotalPaise,
+            discountPaise = discount,
+            taxPaise = percentOf(subtotalPaise - discount, TAX_BPS)
+        )
+    }
 
     /** `amount * bps / 10000`, rounded half up. */
     private fun percentOf(amountPaise: Long, bps: Long): Long = (amountPaise * bps + 5_000L) / 10_000L

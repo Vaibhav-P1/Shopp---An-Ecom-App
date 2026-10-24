@@ -15,31 +15,42 @@ class PriceCalculatorTest {
     }
 
     @Test
-    fun `applies 10 percent discount and 13 percent tax`() {
+    fun `without a coupon there is no discount and 13 percent tax`() {
         // Rs 3000.00
         val breakdown = PriceCalculator.calculate(300_000)
-        assertEquals(30_000, breakdown.discountPaise)
+        assertEquals(0, breakdown.discountPaise)
         assertEquals(39_000, breakdown.taxPaise)
-        assertEquals(309_000, breakdown.totalPaise)
+        assertEquals(339_000, breakdown.totalPaise)
+    }
+
+    @Test
+    fun `tax is charged on the discounted amount`() {
+        // Rs 3000 less Rs 300 -> tax on Rs 2700
+        val breakdown = PriceCalculator.calculate(300_000, discountPaise = 30_000)
+        assertEquals(30_000, breakdown.discountPaise)
+        assertEquals(35_100, breakdown.taxPaise)
+        assertEquals(305_100, breakdown.totalPaise)
+    }
+
+    @Test
+    fun `discount can never exceed the subtotal`() {
+        val breakdown = PriceCalculator.calculate(10_000, discountPaise = 50_000)
+        assertEquals(10_000, breakdown.discountPaise)
+        assertEquals(0, breakdown.taxPaise)
+        assertEquals(0, breakdown.totalPaise)
     }
 
     @Test
     fun `rounds fractional paise half up`() {
-        // 1 paisa: discount 0.1 -> 0, tax 0.13 -> 0
-        assertEquals(0, PriceCalculator.calculate(1).discountPaise)
-        // 5 paise: discount 0.5 -> 1, tax 0.65 -> 1
-        val five = PriceCalculator.calculate(5)
-        assertEquals(1, five.discountPaise)
-        assertEquals(1, five.taxPaise)
-        // 15 paise: discount 1.5 -> 2, tax 1.95 -> 2
-        val fifteen = PriceCalculator.calculate(15)
-        assertEquals(2, fifteen.discountPaise)
-        assertEquals(2, fifteen.taxPaise)
+        // 5 paise: tax 0.65 -> 1; 15 paise: tax 1.95 -> 2; 1 paisa: tax 0.13 -> 0
+        assertEquals(1, PriceCalculator.calculate(5).taxPaise)
+        assertEquals(2, PriceCalculator.calculate(15).taxPaise)
+        assertEquals(0, PriceCalculator.calculate(1).taxPaise)
     }
 
     @Test
     fun `total equals subtotal minus discount plus tax`() {
-        val breakdown = PriceCalculator.calculate(123_457)
+        val breakdown = PriceCalculator.calculate(123_457, discountPaise = 1_234)
         assertEquals(
             breakdown.subtotalPaise - breakdown.discountPaise + breakdown.taxPaise,
             breakdown.totalPaise

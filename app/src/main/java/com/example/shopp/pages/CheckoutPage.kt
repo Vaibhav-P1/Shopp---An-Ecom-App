@@ -8,6 +8,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
@@ -38,12 +41,17 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.shopp.ui.showToast
 import com.example.shopp.components.ErrorView
 import com.example.shopp.components.LoadingView
+import com.example.shopp.components.PrimaryButton
+import com.example.shopp.components.SecondaryButton
+import com.example.shopp.components.ShoppCard
+import com.example.shopp.components.ShoppTextField
 import com.example.shopp.data.PaymentMethod
 import com.example.shopp.domain.Money
 import com.example.shopp.model.AddressModel
 import com.example.shopp.payment.PaymentLauncher
 import com.example.shopp.payment.findActivity
 import com.example.shopp.viewmodel.CheckoutData
+import com.example.shopp.viewmodel.CheckoutUiState
 import com.example.shopp.viewmodel.CheckoutEvent
 import com.example.shopp.viewmodel.CheckoutViewModel
 import com.example.shopp.viewmodel.UiState
@@ -90,8 +98,12 @@ fun CheckoutPage(
         is UiState.Error -> ErrorView(content.message, onRetry = viewModel::retry, modifier = modifier)
         is UiState.Success -> CheckoutContent(
             data = content.data,
-            address = uiState.address,
-            canOrder = uiState.canOrder,
+            state = uiState,
+            coupon = CouponActions(
+                onInputChange = viewModel::onCouponInputChange,
+                onApply = viewModel::applyCoupon,
+                onRemove = viewModel::removeCoupon
+            ),
             onManageAddresses = onManageAddresses,
             paymentMethod = uiState.paymentMethod,
             isPlacing = uiState.isPlacing,
@@ -105,8 +117,8 @@ fun CheckoutPage(
 @Composable
 private fun CheckoutContent(
     data: CheckoutData,
-    address: AddressModel?,
-    canOrder: Boolean,
+    state: CheckoutUiState,
+    coupon: CouponActions,
     onManageAddresses: () -> Unit,
     paymentMethod: PaymentMethod,
     isPlacing: Boolean,
@@ -114,6 +126,9 @@ private fun CheckoutContent(
     onPlaceOrder: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val address = state.address
+    val breakdown = state.breakdown
+    val canOrder = state.canOrder
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -161,12 +176,21 @@ private fun CheckoutContent(
             HorizontalDivider()
             Spacer(modifier = Modifier.height(16.dp))
 
+            CouponSection(state = state, actions = coupon)
+
+            Spacer(modifier = Modifier.height(16.dp))
+            HorizontalDivider()
+            Spacer(modifier = Modifier.height(16.dp))
+
             // Billing Rows Breakdown
-            RowCheckoutItems(title = "Subtotal", value = Money.format(data.breakdown.subtotalPaise))
+            RowCheckoutItems(title = "Subtotal", value = Money.format(breakdown.subtotalPaise))
             Spacer(modifier = Modifier.height(8.dp))
-            RowCheckoutItems(title = "Discount", value = "-" + Money.format(data.breakdown.discountPaise))
+            RowCheckoutItems(
+                title = state.appliedCoupon?.let { "Discount (${it.coupon.code})" } ?: "Discount",
+                value = "-" + Money.format(breakdown.discountPaise)
+            )
             Spacer(modifier = Modifier.height(8.dp))
-            RowCheckoutItems(title = "Tax", value = "+" + Money.format(data.breakdown.taxPaise))
+            RowCheckoutItems(title = "Tax", value = "+" + Money.format(breakdown.taxPaise))
 
             Spacer(modifier = Modifier.height(16.dp))
             HorizontalDivider()
@@ -180,7 +204,7 @@ private fun CheckoutContent(
                 fontSize = 16.sp
             )
             Text(
-                text = Money.format(data.breakdown.totalPaise),
+                text = Money.format(breakdown.totalPaise),
                 modifier = Modifier.fillMaxWidth(),
                 textAlign = TextAlign.Center,
                 fontSize = 30.sp,
@@ -223,20 +247,59 @@ private fun CheckoutContent(
             Spacer(modifier = Modifier.height(8.dp))
         }
 
-        Button(
+        PrimaryButton(
+            text = if (paymentMethod == PaymentMethod.COD) "Place Order" else "Pay Now",
             onClick = onPlaceOrder,
-            enabled = canOrder && !isPlacing,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(50.dp)
-        ) {
-            Text(
-                text = when {
-                    isPlacing -> "Placing order..."
-                    paymentMethod == PaymentMethod.COD -> "Place Order"
-                    else -> "Pay Now"
-                },
-                fontSize = 16.sp
+            enabled = canOrder,
+            isLoading = isPlacing
+        )
+    }
+}
+
+private class CouponActions(
+    val onInputChange: (String) -> Unit,
+    val onApply: () -> Unit,
+    val onRemove: () -> Unit
+)
+
+@Composable
+private fun CouponSection(state: CheckoutUiState, actions: CouponActions) {
+    val applied = state.appliedCoupon
+    Text(text = "Coupon", fontWeight = FontWeight.SemiBold)
+    Spacer(modifier = Modifier.height(8.dp))
+    if (applied != null) {
+        ShoppCard(modifier = Modifier.fillMaxWidth()) {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(start = 16.dp, top = 4.dp, bottom = 4.dp, end = 4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(text = applied.coupon.code, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                    Text(
+                        text = "You save ${Money.format(applied.discountPaise)}",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+                TextButton(onClick = actions.onRemove, enabled = !state.isPlacing) { Text("Remove") }
+            }
+        }
+    } else {
+        Row(verticalAlignment = Alignment.Top) {
+            ShoppTextField(
+                value = state.couponInput,
+                onValueChange = actions.onInputChange,
+                label = "Coupon code",
+                imeAction = ImeAction.Done,
+                keyboardActions = KeyboardActions(onDone = { actions.onApply() }),
+                errorMessage = state.couponError,
+                modifier = Modifier.weight(1f)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            SecondaryButton(
+                text = if (state.isApplyingCoupon) "..." else "Apply",
+                onClick = actions.onApply,
+                enabled = state.couponInput.isNotBlank() && !state.isApplyingCoupon && !state.isPlacing,
+                modifier = Modifier.width(100.dp).padding(top = 4.dp)
             )
         }
     }

@@ -4,10 +4,14 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.shopp.data.AddressRepository
 import com.example.shopp.data.CartRepository
+import com.example.shopp.data.CouponRepository
 import com.example.shopp.data.OrderRepository
 import com.example.shopp.data.PaymentMethod
 import com.example.shopp.data.ProductRepository
 import com.example.shopp.model.AddressModel
+import com.example.shopp.domain.Coupon
+import com.example.shopp.domain.CouponResult
+import com.example.shopp.domain.CouponRules
 import com.example.shopp.domain.Money
 import com.example.shopp.domain.PriceBreakdown
 import com.example.shopp.domain.PriceCalculator
@@ -37,7 +41,7 @@ data class CheckoutLine(
 
 data class CheckoutData(
     val lines: List<CheckoutLine>,
-    val breakdown: PriceBreakdown
+    val subtotalPaise: Long
 ) {
     val hasUnavailableItems: Boolean get() = lines.any { it.unitPricePaise == null }
     val hasOrderableItems: Boolean get() = lines.isNotEmpty() && !hasUnavailableItems
@@ -48,10 +52,20 @@ data class CheckoutUiState(
     val paymentMethod: PaymentMethod = PaymentMethod.COD,
     val isPlacing: Boolean = false,
     /** The primary saved address, which the order is delivered to; null when the user has none. */
-    val address: AddressModel? = null
+    val address: AddressModel? = null,
+    val couponInput: String = "",
+    val appliedCoupon: AppliedCoupon? = null,
+    val couponError: String? = null,
+    val isApplyingCoupon: Boolean = false
 ) {
+    val subtotalPaise: Long get() = (content as? UiState.Success)?.data?.subtotalPaise ?: 0L
+    val breakdown: PriceBreakdown
+        get() = PriceCalculator.calculate(subtotalPaise, appliedCoupon?.discountPaise ?: 0L)
     val canOrder: Boolean get() = (content as? UiState.Success)?.data?.hasOrderableItems == true && address != null
 }
+
+/** A coupon accepted for this checkout together with the discount it gives on the current subtotal. */
+data class AppliedCoupon(val coupon: Coupon, val discountPaise: Long)
 
 sealed interface CheckoutEvent {
     data class StartPayment(val amountPaise: Long, val orderId: String) : CheckoutEvent
@@ -64,6 +78,7 @@ class CheckoutViewModel @Inject constructor(
     private val cartRepository: CartRepository,
     private val productRepository: ProductRepository,
     private val addressRepository: AddressRepository,
+    private val couponRepository: CouponRepository,
     private val orderRepository: OrderRepository,
     private val paymentResultBus: PaymentResultBus
 ) : ViewModel() {
@@ -106,13 +121,42 @@ class CheckoutViewModel @Inject constructor(
         load()
     }
 
+    fun onCouponInputChange(value: String) {
+        _uiState.update { it.copy(couponInput = value, couponError = null) }
+    }
+
+    fun applyCoupon() {
+        val state = _uiState.value
+        if (state.isApplyingCoupon || state.isPlacing) return
+        _uiState.update { it.copy(isApplyingCoupon = true, couponError = null) }
+        viewModelScope.launch {
+            val outcome = couponRepository.getCoupon(state.couponInput).mapCatching { coupon ->
+                when (val result = CouponRules.evaluate(coupon, state.subtotalPaise, System.currentTimeMillis())) {
+                    is CouponResult.Applied -> AppliedCoupon(coupon, result.discountPaise)
+                    is CouponResult.Rejected -> throw IllegalStateException(result.reason)
+                }
+            }
+            _uiState.update {
+                it.copy(
+                    isApplyingCoupon = false,
+                    appliedCoupon = outcome.getOrNull() ?: it.appliedCoupon,
+                    couponInput = if (outcome.isSuccess) "" else it.couponInput,
+                    couponError = outcome.exceptionOrNull()?.let { e -> e.localizedMessage ?: "Could not apply the coupon" }
+                )
+            }
+        }
+    }
+
+    fun removeCoupon() {
+        _uiState.update { it.copy(appliedCoupon = null, couponError = null) }
+    }
+
     fun selectPaymentMethod(method: PaymentMethod) {
         _uiState.update { it.copy(paymentMethod = method) }
     }
 
     fun placeOrder() {
         val state = _uiState.value
-        val data = (state.content as? UiState.Success)?.data ?: return
         val address = state.address ?: return
         if (state.isPlacing || !state.canOrder) return
 
@@ -122,14 +166,14 @@ class CheckoutViewModel @Inject constructor(
             alreadyPaid != null -> submit(address, PaymentMethod.ONLINE, alreadyPaid)
             state.paymentMethod == PaymentMethod.COD -> submit(address, PaymentMethod.COD, null)
             else -> viewModelScope.launch {
-                _events.send(CheckoutEvent.StartPayment(data.breakdown.totalPaise, orderId))
+                _events.send(CheckoutEvent.StartPayment(state.breakdown.totalPaise, orderId))
             }
         }
     }
 
     private fun submit(address: AddressModel, method: PaymentMethod, paymentId: String?) {
         viewModelScope.launch {
-            orderRepository.placeOrder(orderId, address.id, method, paymentId).fold(
+            orderRepository.placeOrder(orderId, address.id, _uiState.value.appliedCoupon?.coupon?.code, method, paymentId).fold(
                 onSuccess = { _events.send(CheckoutEvent.OrderPlaced(orderId)) },
                 onFailure = {
                     _uiState.update { state -> state.copy(isPlacing = false) }
@@ -167,7 +211,7 @@ class CheckoutViewModel @Inject constructor(
                 }.sortedBy { it.title }
 
                 val subtotal = lines.sumOf { (it.unitPricePaise ?: 0L) * it.quantity }
-                CheckoutData(lines, PriceCalculator.calculate(subtotal))
+                CheckoutData(lines, subtotal)
             }
             _uiState.update {
                 it.copy(

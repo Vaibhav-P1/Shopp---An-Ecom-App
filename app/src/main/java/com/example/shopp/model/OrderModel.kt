@@ -21,6 +21,7 @@ data class OrderModel(
     val lines: List<OrderLineModel> = emptyList(),
     val subtotalPaise: Long = 0,
     val discountPaise: Long = 0,
+    val couponCode: String = "",
     val taxPaise: Long = 0,
     val totalPaise: Long = 0,
     val paymentMethod: String = "",

@@ -1,5 +1,7 @@
 package com.example.shopp.data
 
+import com.example.shopp.domain.CouponResult
+import com.example.shopp.domain.CouponRules
 import com.example.shopp.domain.Money
 import com.example.shopp.domain.PriceCalculator
 import com.example.shopp.model.AddressModel
@@ -28,12 +30,14 @@ class OrderRepository @Inject constructor(
     /**
      * Places the order for everything currently in the user's cart, atomically:
      * prices are re-read from the catalogue, the order is written with a snapshot of each line and of the
-     * saved address named by [addressId], and the cart is cleared. Calling it again with the same [orderId]
+     * saved address named by [addressId], and the cart is cleared. A [couponCode] is re-validated here against the
+     * stored coupon, so a stale or tampered client can never get a discount it is not entitled to. Calling it again with the same [orderId]
      * is a no-op, so a duplicated payment callback or a double tap can never create a second order.
      */
     suspend fun placeOrder(
         orderId: String,
         addressId: String,
+        couponCode: String?,
         paymentMethod: PaymentMethod,
         paymentId: String?
     ): Result<Unit> =
@@ -51,9 +55,16 @@ class OrderRepository @Inject constructor(
                 val cart = parseQuantities(user.get("cartItems"))
                 if (cart.isEmpty()) throw IllegalStateException("Your cart is empty")
 
+                val couponSnapshot = couponCode?.takeIf { it.isNotBlank() }?.let {
+                    transaction.get(firestore.collection(CouponRepository.COLLECTION).document(CouponRepository.normalize(it)))
+                }
                 val address = transaction.get(userRef.collection("addresses").document(addressId))
                     .toObject(AddressModel::class.java)
                     ?: throw IllegalStateException("Choose a delivery address before placing an order")
+
+                val coupon = couponSnapshot?.let {
+                    it.toCoupon() ?: throw IllegalStateException("Invalid coupon code")
+                }
 
                 val lines = cart.map { (productId, quantity) ->
                     val snapshot = transaction.get(products.document(productId))
@@ -69,7 +80,14 @@ class OrderRepository @Inject constructor(
                         quantity = quantity
                     )
                 }
-                val breakdown = PriceCalculator.calculate(lines.sumOf { it.unitPricePaise * it.quantity })
+                val subtotal = lines.sumOf { it.unitPricePaise * it.quantity }
+                val discount = coupon?.let { applied ->
+                    when (val result = CouponRules.evaluate(applied, subtotal, System.currentTimeMillis())) {
+                        is CouponResult.Applied -> result.discountPaise
+                        is CouponResult.Rejected -> throw IllegalStateException(result.reason)
+                    }
+                } ?: 0L
+                val breakdown = PriceCalculator.calculate(subtotal, discount)
 
                 transaction.set(
                     orderRef,
@@ -83,6 +101,7 @@ class OrderRepository @Inject constructor(
                         lines = lines,
                         subtotalPaise = breakdown.subtotalPaise,
                         discountPaise = breakdown.discountPaise,
+                        couponCode = coupon?.code.orEmpty(),
                         taxPaise = breakdown.taxPaise,
                         totalPaise = breakdown.totalPaise,
                         paymentMethod = paymentMethod.name,
