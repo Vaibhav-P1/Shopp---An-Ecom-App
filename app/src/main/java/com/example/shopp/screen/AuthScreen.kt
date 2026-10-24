@@ -2,12 +2,20 @@ package com.example.shopp.screen
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.Alignment
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -15,7 +23,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -46,11 +53,7 @@ fun AuthScreen(
     val isLoading = uiState.isLoading
     AuthEventsEffect(authViewModel, onAuthenticated)
 
-    Column(
-        modifier = modifier.fillMaxSize().padding(Spacing.xxl),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
+    AuthLayout(modifier) {
         Image(
             painter = painterResource(id = R.drawable.authbanner),
             contentDescription = "Banner",
@@ -111,4 +114,24 @@ fun GoogleButton(onClick: () -> Unit, enabled: Boolean, modifier: Modifier = Mod
             )
         }
     )
+}
+
+/**
+ * Shared layout for the auth screens: content is centred when it fits and scrolls when it does not
+ * (small screens, landscape, keyboard open), so the primary button is never hidden by the IME.
+ */
+@Composable
+fun AuthLayout(modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
+    BoxWithConstraints(modifier.fillMaxSize().systemBarsPadding().imePadding()) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = maxHeight)
+                .verticalScroll(rememberScrollState())
+                .padding(Spacing.xxl),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally,
+            content = content
+        )
+    }
 }

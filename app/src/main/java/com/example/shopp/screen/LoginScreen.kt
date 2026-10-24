@@ -1,13 +1,9 @@
 package com.example.shopp.screen
 
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -17,7 +13,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -45,11 +40,7 @@ fun LoginScreen(modifier: Modifier = Modifier, onAuthenticated: () -> Unit, auth
     val isLoading = uiState.isLoading
     AuthEventsEffect(authViewModel, onAuthenticated)
 
-    Column(
-        modifier = modifier.fillMaxSize().padding(Spacing.xxl),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
+    AuthLayout(modifier) {
         Text(
             text = "Welcome Back!",
             modifier = Modifier.fillMaxWidth(),

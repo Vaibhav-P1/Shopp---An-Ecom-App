@@ -1,5 +1,6 @@
 package com.example.shopp
 
+import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
@@ -18,7 +19,11 @@ import com.example.shopp.screen.SignupScreen
 import com.example.shopp.seller.SellerAccount
 
 @Composable
-fun AppNavigation(modifier: Modifier, isLoggedIn: Boolean) {
+fun AppNavigation(isLoggedIn: Boolean) {
+
+    // Full-screen destinations keep clear of the system bars and keyboard. Auth screens handle
+    // this themselves (scrollable layout) and Home's tab Scaffold already applies the bars.
+    val insets = Modifier.safeDrawingPadding()
 
     val navController = rememberNavController()
 
@@ -26,7 +31,6 @@ fun AppNavigation(modifier: Modifier, isLoggedIn: Boolean) {
 
         composable<Auth> {
             AuthScreen(
-                modifier = modifier,
                 onLoginClick = { navController.navigate(Login) },
                 onSignupClick = { navController.navigate(Signup) },
                 onAuthenticated = { navController.goHomeAfterAuth() }
@@ -34,16 +38,15 @@ fun AppNavigation(modifier: Modifier, isLoggedIn: Boolean) {
         }
 
         composable<Login> {
-            LoginScreen(modifier = modifier, onAuthenticated = { navController.goHomeAfterAuth() })
+            LoginScreen(onAuthenticated = { navController.goHomeAfterAuth() })
         }
 
         composable<Signup> {
-            SignupScreen(modifier = modifier, onAuthenticated = { navController.goHomeAfterAuth() })
+            SignupScreen(onAuthenticated = { navController.goHomeAfterAuth() })
         }
 
         composable<Home> {
             HomeScreen(
-                modifier = modifier,
                 onCategoryClick = { navController.navigate(CategoryProducts(it)) },
                 onProductClick = { navController.navigate(ProductDetails(it)) },
                 onCheckout = { navController.navigate(Checkout) },
@@ -58,18 +61,18 @@ fun AppNavigation(modifier: Modifier, isLoggedIn: Boolean) {
 
         composable<CategoryProducts> {
             CategoryProductsPage(
-                modifier = modifier,
+                modifier = insets,
                 onProductClick = { productId -> navController.navigate(ProductDetails(productId)) }
             )
         }
 
         composable<ProductDetails> {
-            ProductDetailsPage(modifier)
+            ProductDetailsPage(insets)
         }
 
         composable<Checkout> {
             CheckoutPage(
-                modifier = modifier,
+                modifier = insets,
                 onOrderPlaced = {
                     // Wipe the back stack so Back can't return to checkout
                     navController.navigate(Home) { popUpTo(0) { inclusive = true } }
@@ -79,17 +82,17 @@ fun AppNavigation(modifier: Modifier, isLoggedIn: Boolean) {
 
         composable<Orders> {
             OrdersPage(
-                modifier = modifier,
+                modifier = insets,
                 onOrderClick = { orderId -> navController.navigate(OrderDetails(orderId)) }
             )
         }
 
         composable<OrderDetails> {
-            OrderDetailsPage(modifier)
+            OrderDetailsPage(insets)
         }
 
         composable<Seller> {
-            SellerAccount(modifier)
+            SellerAccount(insets)
         }
     }
 }

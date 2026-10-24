@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
@@ -89,7 +88,6 @@ private fun ProductDetailsContent(
         modifier = modifier
             .fillMaxSize()
             .padding(16.dp)
-            .statusBarsPadding()
             .verticalScroll(rememberScrollState())
     ) {
         // Product Title

@@ -5,8 +5,8 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Scaffold
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import com.example.shopp.data.AuthRepository
@@ -29,8 +29,9 @@ class MainActivity : ComponentActivity(), PaymentResultListener {
         enableEdgeToEdge()
         setContent {
             ShoppTheme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    AppNavigation(Modifier.padding(innerPadding), isLoggedIn = authRepository.isLoggedIn)
+                // Insets are handled per screen (see AppNavigation), so there is no app-level Scaffold
+                Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+                    AppNavigation(isLoggedIn = authRepository.isLoggedIn)
                 }
             }
         }
