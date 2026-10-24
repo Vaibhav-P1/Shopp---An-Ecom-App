@@ -16,3 +16,6 @@ app/google-services.json
 local.properties
 project-plan/
 .kotlin/
+
+# Firebase emulator logs
+*-debug.log
