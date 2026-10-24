@@ -10,6 +10,7 @@ import kotlinx.serialization.Serializable
 @Serializable data object Checkout
 @Serializable data object Orders
 @Serializable data object Seller
+@Serializable data object Search
 @Serializable data class CategoryProducts(val categoryId: String)
 @Serializable data class ProductDetails(val productId: String)
 @Serializable data class OrderDetails(val orderId: String)

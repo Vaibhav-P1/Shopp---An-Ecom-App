@@ -52,6 +52,18 @@ class ProductRepository @Inject constructor(
             ?: throw NoSuchElementException("This product is no longer available")
     }
 
+    @Volatile private var catalogueCache: List<ProductModel>? = null
+
+    /**
+     * The whole catalogue for client-side search and filtering. It is small, so it is fetched once and kept in
+     * memory; pass [forceRefresh] to reload it.
+     */
+    suspend fun getAllProducts(forceRefresh: Boolean = false): Result<List<ProductModel>> = firestoreCall {
+        catalogueCache.takeIf { !forceRefresh } ?: products.get().await().documents
+            .mapNotNull { it.toProduct() }
+            .also { catalogueCache = it }
+    }
+
     /** Firestore allows at most 30 values per `whereIn`, so ids are fetched in chunks. */
     suspend fun getProductsByIds(ids: Collection<String>): Result<List<ProductModel>> = firestoreCall {
         ids.distinct().chunked(30).flatMap { chunk ->

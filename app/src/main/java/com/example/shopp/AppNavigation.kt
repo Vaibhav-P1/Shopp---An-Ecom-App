@@ -11,6 +11,7 @@ import com.example.shopp.pages.CategoryProductsPage
 import com.example.shopp.pages.CheckoutPage
 import com.example.shopp.pages.OrderDetailsPage
 import com.example.shopp.pages.OrdersPage
+import com.example.shopp.pages.SearchPage
 import com.example.shopp.pages.ProductDetailsPage
 import com.example.shopp.screen.AuthScreen
 import com.example.shopp.screen.HomeScreen
@@ -52,10 +53,19 @@ fun AppNavigation(isLoggedIn: Boolean) {
                 onCheckout = { navController.navigate(Checkout) },
                 onOrdersClick = { navController.navigate(Orders) },
                 onSellerClick = { navController.navigate(Seller) },
+                onSearchClick = { navController.navigate(Search) },
                 onSignedOut = {
                     // Clear the whole back stack so Back can't return into the signed-out app
                     navController.navigate(Auth) { popUpTo(0) { inclusive = true } }
                 }
+            )
+        }
+
+        composable<Search> {
+            SearchPage(
+                modifier = insets,
+                onBack = { navController.popBackStack() },
+                onProductClick = { productId -> navController.navigate(ProductDetails(productId)) }
             )
         }
 

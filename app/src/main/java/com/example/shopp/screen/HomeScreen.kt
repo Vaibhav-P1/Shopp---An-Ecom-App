@@ -50,6 +50,7 @@ fun HomeScreen(
     onCheckout: () -> Unit,
     onOrdersClick: () -> Unit,
     onSellerClick: () -> Unit,
+    onSearchClick: () -> Unit,
     onSignedOut: () -> Unit
 ){
 
@@ -127,6 +128,7 @@ fun HomeScreen(
                     onCheckout = onCheckout,
                     onOrdersClick = onOrdersClick,
                     onSellerClick = onSellerClick,
+                    onSearchClick = onSearchClick,
                     onSignedOut = onSignedOut
                 )
             }
@@ -145,10 +147,11 @@ fun ContentScreen(
     onCheckout: () -> Unit,
     onOrdersClick: () -> Unit,
     onSellerClick: () -> Unit,
+    onSearchClick: () -> Unit,
     onSignedOut: () -> Unit
 ) {
     when (selectedIndex) {
-        0-> HomePage(modifier = modifier, onCategoryClick = onCategoryClick)
+        0-> HomePage(modifier = modifier, onCategoryClick = onCategoryClick, onSearchClick = onSearchClick)
         1-> FavoritePage(modifier = modifier, onProductClick = onProductClick)
         2-> CartPage(modifier = modifier, onCheckout = onCheckout, onProductClick = onProductClick)
         3-> ProfilePage(

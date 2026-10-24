@@ -31,6 +31,7 @@ import com.example.shopp.viewmodel.HomeViewModel
 fun HomePage(
     modifier: Modifier = Modifier,
     onCategoryClick: (String) -> Unit,
+    onSearchClick: () -> Unit,
     homeViewModel: HomeViewModel = hiltViewModel()
 ) {
     val uiState by homeViewModel.uiState.collectAsStateWithLifecycle()
@@ -46,6 +47,7 @@ fun HomePage(
             isRefreshing = isRefreshing,
             onRefresh = homeViewModel::refresh,
             onCategoryClick = onCategoryClick,
+            onSearchClick = onSearchClick,
             modifier = modifier
         )
     }
@@ -58,6 +60,7 @@ private fun HomeContent(
     isRefreshing: Boolean,
     onRefresh: () -> Unit,
     onCategoryClick: (String) -> Unit,
+    onSearchClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     PullToRefreshBox(
@@ -73,8 +76,7 @@ private fun HomeContent(
 
             item {
                 Spacer(modifier = Modifier.height(8.dp))
-                // Search screen arrives with Phase B
-                HeaderView(name = state.userName, onSearchClick = {})
+                HeaderView(name = state.userName, onSearchClick = onSearchClick)
                 Spacer(modifier = Modifier.height(10.dp))
             }
 
