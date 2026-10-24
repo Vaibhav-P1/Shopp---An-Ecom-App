@@ -56,7 +56,7 @@ fun AuthScreen(
     AuthLayout(modifier) {
         Image(
             painter = painterResource(id = R.drawable.authbanner),
-            contentDescription = "Banner",
+            contentDescription = null, // decorative,
             modifier = Modifier.fillMaxWidth().height(300.dp)
         )
 

@@ -9,6 +9,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -85,7 +87,7 @@ fun CartItemView(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     IconButton(onClick = onDecrement) {
-                        Text(text = "−", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                        Icon(imageVector = Icons.Default.Remove, contentDescription = "Decrease quantity")
                     }
 
                     Text(
@@ -95,7 +97,7 @@ fun CartItemView(
                     )
 
                     IconButton(onClick = onIncrement, enabled = product != null) {
-                        Text(text = "+", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                        Icon(imageVector = Icons.Default.Add, contentDescription = "Increase quantity")
                     }
                 }
             }

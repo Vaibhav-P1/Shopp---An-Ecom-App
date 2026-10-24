@@ -61,7 +61,7 @@ fun LoginScreen(modifier: Modifier = Modifier, onAuthenticated: () -> Unit, auth
 
         Image(
             painter = painterResource(id = R.drawable.signupbanner),
-            contentDescription = "Banner",
+            contentDescription = null, // decorative,
             modifier = Modifier.fillMaxWidth().height(260.dp)
         )
 

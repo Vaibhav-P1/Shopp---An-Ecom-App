@@ -108,7 +108,7 @@ private fun ProfileContent(
 
         Image(
             painter = painterResource(id = R.drawable.profile),
-            contentDescription = "Profile Icon",
+            contentDescription = null, // decorative,
             modifier = Modifier
                 .fillMaxWidth()
                 .height(150.dp)

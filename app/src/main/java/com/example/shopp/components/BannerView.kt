@@ -45,7 +45,7 @@ fun BannerView(banners: List<String>, modifier: Modifier = Modifier) {
         ) {
             AsyncImage(
                 model = banners[it],
-                contentDescription = "Banner Image",
+                contentDescription = "Promotion ${it + 1} of ${banners.size}",
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(16.dp))

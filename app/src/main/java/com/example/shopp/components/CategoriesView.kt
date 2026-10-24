@@ -17,6 +17,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
@@ -42,7 +43,7 @@ fun CategoriesView(
 fun CategoryItem(category: CategoryModel, onClick: () -> Unit) {
     Card(
         modifier = Modifier.size(100.dp)
-            .clickable(onClick = onClick),
+            .clickable(onClickLabel = "Open ${category.name}", role = Role.Button, onClick = onClick),
         shape = RoundedCornerShape(12.dp),
         elevation = CardDefaults.cardElevation(4.dp),
         colors = CardDefaults.cardColors(
@@ -56,7 +57,7 @@ fun CategoryItem(category: CategoryModel, onClick: () -> Unit) {
         ){
             AsyncImage(
                 model = category.imageUrl,
-                contentDescription = category.name,
+                contentDescription = null, // the name is shown as text below
                 modifier = Modifier.size(50.dp)
             )
             Spacer(modifier = Modifier.height(8.dp))
