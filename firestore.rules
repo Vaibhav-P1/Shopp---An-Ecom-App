@@ -33,6 +33,27 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // Reviews: one per user per product (the document id is the author's uid), and only for buyers. The
+    // review must point at one of the author's own delivered orders that contains the product.
+    match /data/stock/products/{productId}/reviews/{uid} {
+      function ownDeliveredOrder() {
+        let order = get(/databases/$(database)/documents/orders/$(request.resource.data.orderId));
+        return order.data.userId == request.auth.uid
+          && order.data.status == 'DELIVERED'
+          && productId in order.data.items.keys();
+      }
+
+      allow create, update: if signedIn() && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['userId', 'userName', 'orderId', 'rating', 'text', 'updatedAt'])
+        && request.resource.data.userId == uid
+        && request.resource.data.userName is string && request.resource.data.userName.size() <= 80
+        && request.resource.data.rating is int && request.resource.data.rating >= 1 && request.resource.data.rating <= 5
+        && request.resource.data.text is string && request.resource.data.text.size() <= 500
+        && request.resource.data.updatedAt == request.time
+        && ownDeliveredOrder();
+      allow delete: if signedIn() && request.auth.uid == uid;
+    }
+
     // Coupons are managed in the console; the app can only read them (orders re-check them in a transaction).
     match /coupons/{code} {
       allow read: if signedIn();

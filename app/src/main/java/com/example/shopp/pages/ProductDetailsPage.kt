@@ -39,9 +39,13 @@ import coil.compose.AsyncImage
 import com.example.shopp.ui.showToast
 import com.example.shopp.components.ErrorView
 import com.example.shopp.components.LoadingView
+import com.example.shopp.components.RatingSummaryLine
+import com.example.shopp.components.ReviewsSection
 import com.example.shopp.components.rememberAddToCart
 import com.example.shopp.model.ProductModel
 import com.example.shopp.viewmodel.ProductDetailsViewModel
+import com.example.shopp.viewmodel.ProductReviewsViewModel
+import com.example.shopp.viewmodel.ReviewsUiState
 import com.example.shopp.viewmodel.UiState
 import com.tbuonomo.viewpagerdotsindicator.compose.DotsIndicator
 import com.tbuonomo.viewpagerdotsindicator.compose.model.DotGraphic
@@ -50,6 +54,7 @@ import com.tbuonomo.viewpagerdotsindicator.compose.type.ShiftIndicatorType
 @Composable
 fun ProductDetailsPage(
     modifier: Modifier = Modifier,
+    reviewsViewModel: ProductReviewsViewModel = hiltViewModel(),
     viewModel: ProductDetailsViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -59,8 +64,14 @@ fun ProductDetailsPage(
 
     val isFavorite by viewModel.isFavorite.collectAsStateWithLifecycle()
 
+    val reviews by reviewsViewModel.uiState.collectAsStateWithLifecycle()
+    val isSavingReview by reviewsViewModel.isSaving.collectAsStateWithLifecycle()
+
     LaunchedEffect(viewModel) {
         viewModel.messages.collect { context.showToast(it) }
+    }
+    LaunchedEffect(reviewsViewModel) {
+        reviewsViewModel.messages.collect { context.showToast(it) }
     }
 
     when (val state = uiState) {
@@ -71,6 +82,10 @@ fun ProductDetailsPage(
             isFavorite = isFavorite,
             onToggleFavorite = viewModel::toggleFavorite,
             onAddToCart = { addToCart(productId) },
+            reviews = reviews,
+            isSavingReview = isSavingReview,
+            onSubmitReview = reviewsViewModel::submit,
+            onDeleteReview = reviewsViewModel::deleteMine,
             modifier = modifier
         )
     }
@@ -82,6 +97,10 @@ private fun ProductDetailsContent(
     isFavorite: Boolean,
     onToggleFavorite: () -> Unit,
     onAddToCart: () -> Unit,
+    reviews: ReviewsUiState,
+    isSavingReview: Boolean,
+    onSubmitReview: (Int, String) -> Unit,
+    onDeleteReview: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -161,6 +180,7 @@ private fun ProductDetailsContent(
                 )
             }
         }
+        RatingSummaryLine(reviews.summary)
         Spacer(modifier = Modifier.height(8.dp))
 
         // Add to Cart Primary Button
@@ -220,5 +240,14 @@ private fun ProductDetailsContent(
                 }
             }
         }
+
+        Spacer(modifier = Modifier.height(24.dp))
+        ReviewsSection(
+            state = reviews,
+            isSaving = isSavingReview,
+            onSubmit = onSubmitReview,
+            onDeleteMine = onDeleteReview
+        )
+        Spacer(modifier = Modifier.height(16.dp))
     }
 }
